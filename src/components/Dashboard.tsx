@@ -61,61 +61,61 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-primary/80 to-secondary/80 rounded-xl p-8 text-primary-foreground shadow-sm">
         <h1 className="text-3xl font-bold mb-2">สวัสดี! 👋</h1>
-        <p className="text-blue-100">
+        <p className="text-primary-foreground/90">
           วันนี้คุณมีนัดหมาย {todaySessions.length} เซสชัน และลูกเทรนที่ต้องติดตาม {followUpClients.length} คน
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">นัดวันนี้</CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todaySessions.length}</div>
+            <div className="text-2xl font-bold text-primary">{todaySessions.length}</div>
             <p className="text-xs text-muted-foreground">
               เซสชันที่กำหนดไว้
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-secondary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ลูกเทรนที่ต้องตาม</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-5 w-5 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{followUpClients.length}</div>
+            <div className="text-2xl font-bold text-secondary">{followUpClients.length}</div>
             <p className="text-xs text-muted-foreground">
               นานกว่า 7 วันไม่มีเซสชัน
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/5 to-chart-3/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">การ์ดสรุปค้าง</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-5 w-5 text-chart-3" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{incompleteSummaries.length}</div>
+            <div className="text-2xl font-bold text-chart-3">{incompleteSummaries.length}</div>
             <p className="text-xs text-muted-foreground">
               ยังไม่ได้สร้างการ์ด
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-chart-4/20 bg-gradient-to-br from-chart-4/5 to-chart-4/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ลูกเทรนทั้งหมด</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-5 w-5 text-chart-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clients.length}</div>
+            <div className="text-2xl font-bold text-chart-4">{clients.length}</div>
             <p className="text-xs text-muted-foreground">
               {clients.filter(c => c.status === 'active').length} คน กำลังออกกำลังกาย
             </p>
@@ -195,8 +195,8 @@ export default function Dashboard() {
           <CardContent className="space-y-4">
             {followUpClients.length === 0 ? (
               <div className="text-center py-4">
-                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                <p className="text-gray-500">ลูกเทรนทุกคนมีเซสชันสม่ำเสมอ</p>
+                <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-2" />
+                <p className="text-muted-foreground">ลูกเทรนทุกคนมีเซสชันสม่ำเสมอ</p>
               </div>
             ) : (
               followUpClients.slice(0, 5).map(client => {
@@ -210,7 +210,7 @@ export default function Dashboard() {
 
                 return (
                   <Link key={client.id} to={`/clients/${client.id}`}>
-                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={client.avatar} alt={client.name} />
@@ -218,7 +218,7 @@ export default function Dashboard() {
                         </Avatar>
                         <div>
                           <p className="font-medium">{client.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {daysSince ? `${daysSince} วันที่แล้ว` : 'ยังไม่เคยมีเซสชัน'}
                           </p>
                         </div>

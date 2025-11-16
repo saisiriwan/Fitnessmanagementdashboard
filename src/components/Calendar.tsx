@@ -79,11 +79,11 @@ export default function Calendar() {
           <div className="grid grid-cols-7 gap-2">
             {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((day, index) => (
               <div key={day} className="text-center">
-                <div className="font-medium text-sm text-gray-600 mb-2">{day}</div>
+                <div className="font-medium text-sm text-muted-foreground mb-2">{day}</div>
                 <div className={`border rounded-lg p-2 min-h-[200px] ${
                   weekDates[index].toDateString() === new Date().toDateString() 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : 'hover:bg-gray-50'
+                    ? 'bg-accent border-primary' 
+                    : 'hover:bg-muted'
                 }`}>
                   <div className="font-medium text-sm mb-2">
                     {weekDates[index].getDate()}
@@ -102,7 +102,7 @@ export default function Calendar() {
                       return (
                         <div 
                           key={session.id}
-                          className="bg-blue-100 text-blue-800 text-xs p-1 rounded truncate cursor-pointer hover:bg-blue-200"
+                          className="bg-primary/10 text-primary text-xs p-1 rounded truncate cursor-pointer hover:bg-primary/20 transition-colors"
                           title={`${client.name} - ${time}`}
                         >
                           <div className="font-medium">{time}</div>
@@ -143,10 +143,10 @@ export default function Calendar() {
                 return (
                   <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="text-sm font-medium text-blue-600">{time}</div>
+                      <div className="text-sm font-medium text-primary">{time}</div>
                       <div>
                         <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-gray-500">{client.goal}</p>
+                        <p className="text-sm text-muted-foreground">{client.goal}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

@@ -171,7 +171,7 @@ export default function Reports() {
               {sessionData.map((day, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div 
-                    className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600"
+                    className="w-full bg-primary rounded-t transition-all hover:bg-primary/80"
                     style={{ height: `${(day.sessions / 8) * 200}px` }}
                     title={`${day.sessions} เซสชัน`}
                   ></div>
@@ -204,7 +204,7 @@ export default function Reports() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all"
+                        className="bg-primary h-2 rounded-full transition-all"
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>

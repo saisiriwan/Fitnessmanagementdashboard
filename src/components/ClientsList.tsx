@@ -128,30 +128,18 @@ export default function ClientsList() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ทั้งหมด</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{clients.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำลังออกกำลัง</CardTitle>
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-primary rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {clients.filter(c => c.status === 'active').length}
-            </div>
+            <div className="text-2xl font-bold">{clients.filter(c => c.status === 'active').length}</div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-secondary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">พักชั่วคราว</CardTitle>
             <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
@@ -163,7 +151,7 @@ export default function ClientsList() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-gray-500/30 bg-gradient-to-br from-gray-500/10 to-gray-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ไม่ได้ใช้งาน</CardTitle>
             <div className="w-3 h-3 bg-gray-500 rounded-full"></div>

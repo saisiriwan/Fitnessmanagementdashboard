@@ -39,7 +39,7 @@ function SidebarContent() {
   return (
     <div className="flex flex-col h-full">
       <div className="p-6">
-        <h2 className="text-2xl font-bold text-gray-900">Trainer Pro</h2>
+        <h2 className="text-2xl font-bold text-primary">Trainer Pro</h2>
       </div>
       
       <nav className="flex-1 px-4 space-y-2">
@@ -51,8 +51,8 @@ function SidebarContent() {
               to={item.href}
               className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground/70 hover:bg-accent hover:text-foreground'
               }`}
             >
               <item.icon className="mr-3 h-5 w-5" />
@@ -75,15 +75,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-gray-200">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:bg-card lg:border-r lg:border-border">
         <SidebarContent />
       </div>
 
       {/* Mobile Sidebar */}
       <Sheet>
-        <div className="lg:hidden flex items-center p-4 bg-white border-b border-gray-200">
+        <div className="lg:hidden flex items-center p-4 bg-card border-b border-border">
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
               <Menu className="h-6 w-6" />
@@ -99,10 +99,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 lg:pl-64">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
+        <header className="bg-card border-b border-border px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="hidden lg:block">
-              <h1 className="text-2xl font-semibold text-gray-900">
+              <h1 className="text-2xl font-semibold text-foreground">
                 {navigation.find(item => location.pathname.startsWith(item.href))?.name || 'Trainer Pro'}
               </h1>
             </div>

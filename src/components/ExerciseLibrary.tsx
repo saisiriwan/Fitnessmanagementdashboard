@@ -223,10 +223,10 @@ export default function ExerciseLibrary() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-secondary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">คาร์ดิโอ</CardTitle>
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-secondary rounded-full"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -235,10 +235,10 @@ export default function ExerciseLibrary() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-chart-3/30 bg-gradient-to-br from-chart-3/10 to-chart-3/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ยืดหยุ่น</CardTitle>
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-chart-3 rounded-full"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

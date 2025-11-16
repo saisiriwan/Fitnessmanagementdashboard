@@ -196,10 +196,10 @@ export default function SessionLog() {
     navigate(`/clients/${client.id}?tab=sessions`);
   };
 
-  const getExerciseStatusIcon = (status: string) => {
+  const getExerciseStatusIcon = (status?: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'current': return <Play className="h-4 w-4 text-blue-500" />;
+      case 'completed': return <CheckCircle2 className="h-4 w-4 text-primary" />;
+      case 'current': return <Play className="h-4 w-4 text-secondary" />;
       case 'skipped': return <Minus className="h-4 w-4 text-gray-400" />;
       default: return <Circle className="h-4 w-4 text-gray-300" />;
     }

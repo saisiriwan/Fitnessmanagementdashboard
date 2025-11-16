@@ -71,20 +71,20 @@ export default function ClientSessions({ client }: ClientSessionsProps) {
     <div className="space-y-6">
       {/* Session Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-chart-1/30 bg-gradient-to-br from-chart-1/10 to-chart-1/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">เซสชันทั้งหมด</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-chart-1" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{clientSessions.length}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">เสร็จสิ้น</CardTitle>
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-primary rounded-full"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -93,10 +93,10 @@ export default function ClientSessions({ client }: ClientSessionsProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-chart-5/30 bg-gradient-to-br from-chart-5/10 to-chart-5/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำลังดำเนินการ</CardTitle>
-            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-chart-5 rounded-full"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -105,10 +105,10 @@ export default function ClientSessions({ client }: ClientSessionsProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-secondary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำหนดไว้</CardTitle>
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <div className="w-4 h-4 bg-secondary rounded-full"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
