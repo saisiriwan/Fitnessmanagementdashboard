@@ -201,47 +201,47 @@ export default function ExerciseLibrary() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ท่าทั้งหมด</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <BookOpen className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{exercises.length}</div>
+            <div className="text-2xl font-bold text-primary">{exercises.length}</div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-secondary/20 bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">เสริมแรง</CardTitle>
-            <Dumbbell className="h-4 w-4 text-muted-foreground" />
+            <Dumbbell className="h-4 w-4 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-secondary">
               {exercises.filter(e => e.modality === 'strength').length}
             </div>
           </CardContent>
         </Card>
         
-        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-secondary/5">
+        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/10 to-chart-3/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">คาร์ดิโอ</CardTitle>
-            <div className="w-4 h-4 bg-secondary rounded-full"></div>
+            <div className="w-4 h-4 bg-chart-3 rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-chart-3">
               {exercises.filter(e => e.modality === 'cardio').length}
             </div>
           </CardContent>
         </Card>
         
-        <Card className="border-chart-3/30 bg-gradient-to-br from-chart-3/10 to-chart-3/5">
+        <Card className="border-chart-4/20 bg-gradient-to-br from-chart-4/10 to-chart-4/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ยืดหยุ่น</CardTitle>
-            <div className="w-4 h-4 bg-chart-3 rounded-full"></div>
+            <div className="w-4 h-4 bg-chart-4 rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-chart-4">
               {exercises.filter(e => e.modality === 'flexibility').length}
             </div>
           </CardContent>

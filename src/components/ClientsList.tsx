@@ -99,13 +99,15 @@ export default function ClientsList() {
     return statusMap[status as keyof typeof statusMap] || { label: status, variant: 'outline' as const };
   };
 
+  const activeClients = clients.filter(c => c.status === 'active');
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">ลูกเทรน</h1>
-          <p className="text-gray-600">จัดการข้อมูลลูกเทรนทั้งหมด</p>
+          <h1 className="text-3xl font-bold">การจัดการลูกเทรน</h1>
+          <p className="text-muted-foreground">จัดการและติดตามข้อมูลลูกเทรนทั้งหมด</p>
         </div>
         
         <Dialog open={showNewClientModal} onOpenChange={setShowNewClientModal}>
@@ -119,7 +121,7 @@ export default function ClientsList() {
             <DialogHeader>
               <DialogTitle>เพิ่มลูกเทรนใหม่</DialogTitle>
               <DialogDescription>
-                กรอกข้อมูลพื้นฐานของลูกเทรนใหม่
+                กรอกข้อมูลพื้นฐาน ระบบจะแจ้งเตือนหากชื่อซ้ำกับลูกเทรนที่มีอยู่
               </DialogDescription>
             </DialogHeader>
             <NewClientModal onClientCreated={handleNewClient} />
@@ -129,13 +131,13 @@ export default function ClientsList() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
+        <Card className="border-accent/30 bg-gradient-to-br from-accent/10 to-accent/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำลังออกกำลัง</CardTitle>
-            <div className="w-3 h-3 bg-primary rounded-full"></div>
+            <div className="w-3 h-3 bg-accent rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clients.filter(c => c.status === 'active').length}</div>
+            <div className="text-2xl font-bold text-accent">{activeClients.length}</div>
           </CardContent>
         </Card>
         

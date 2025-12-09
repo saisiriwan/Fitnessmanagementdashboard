@@ -60,43 +60,121 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary/80 to-secondary/80 rounded-xl p-8 text-primary-foreground shadow-sm">
+      {/* Welcome Section - แสดงภาพรวมสิ่งสำคัญที่สุด */}
+      <div className="bg-gradient-to-r from-primary via-primary/90 to-accent rounded-xl p-8 text-white shadow-md">
         <h1 className="text-3xl font-bold mb-2">สวัสดี! 👋</h1>
-        <p className="text-primary-foreground/90">
-          วันนี้คุณมีนัดหมาย {todaySessions.length} เซสชัน และลูกเทรนที่ต้องติดตาม {followUpClients.length} คน
+        <p className="text-white/95 text-lg">
+          {todaySessions.length > 0 
+            ? `วันนี้คุณมีนัดหมาย ${todaySessions.length} เซสชัน` 
+            : 'วันนี้คุณไม่มีนัดหมาย'}
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+      {/* Today's Sessions - หัวใจสำคัญของหน้า Dashboard */}
+      <Card className="border-accent/30 shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <CalendarDays className="h-6 w-6 text-accent" />
+                นัดหมายวันนี้
+              </CardTitle>
+              <CardDescription className="mt-1">
+                เซสชันที่กำหนดไว้สำหรับวันนี้
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={() => navigate('/calendar')}
+              variant="outline"
+              size="sm"
+            >
+              ดูปฏิทินทั้งหมด
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {todaySessions.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle2 className="h-16 w-16 text-primary mx-auto mb-4 opacity-50" />
+              <p className="text-lg text-muted-foreground">ไม่มีนัดหมายวันนี้</p>
+              <p className="text-sm text-muted-foreground mt-2">คุณมีเวลาว่างสำหรับการวางแผนหรือติดตามลูกเทรน</p>
+            </div>
+          ) : (
+            todaySessions.map(session => {
+              const client = getClientById(session.clientId);
+              if (!client) return null;
+              
+              const sessionTime = new Date(session.date).toLocaleTimeString('th-TH', {
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+
+              return (
+                <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={client.avatar} alt={client.name} />
+                      <AvatarFallback className="text-lg">{client.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold text-lg">{client.name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          {sessionTime}
+                        </div>
+                        <Badge variant="outline">{client.goal}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    size="lg" 
+                    onClick={() => handleStartSession(session.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Play className="h-5 w-5" />
+                    เริ่มเซสชัน
+                  </Button>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">นัดวันนี้</CardTitle>
-            <CalendarDays className="h-5 w-5 text-primary" />
+            <CardTitle className="text-sm font-medium">ลูกเทรนทั้งหมด</CardTitle>
+            <Users className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{todaySessions.length}</div>
+            <div className="text-2xl font-bold text-primary">{clients.length}</div>
             <p className="text-xs text-muted-foreground">
-              เซสชันที่กำหนดไว้
+              {clients.filter(c => c.status === 'active').length} คน กำลังเทรนอยู่
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-secondary/10">
+        <Card className="border-accent/20 bg-gradient-to-br from-accent/10 to-accent/5 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-accent/40"
+          onClick={() => followUpClients.length > 0 && navigate('/clients')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ลูกเทรนที่ต้องตาม</CardTitle>
-            <Users className="h-5 w-5 text-secondary" />
+            <CardTitle className="text-sm font-medium">ต้องติดตาม</CardTitle>
+            <TrendingUp className="h-5 w-5 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary">{followUpClients.length}</div>
+            <div className="text-2xl font-bold text-accent">{followUpClients.length}</div>
             <p className="text-xs text-muted-foreground">
-              นานกว่า 7 วันไม่มีเซสชัน
+              ไม่มีเซสชันมากกว่า 7 วัน
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/5 to-chart-3/10">
+        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/10 to-chart-3/5 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-chart-3/40"
+          onClick={() => incompleteSummaries.length > 0 && navigate('/reports')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">การ์ดสรุปค้าง</CardTitle>
             <FileText className="h-5 w-5 text-chart-3" />
@@ -108,48 +186,44 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
-
-        <Card className="border-chart-4/20 bg-gradient-to-br from-chart-4/5 to-chart-4/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ลูกเทรนทั้งหมด</CardTitle>
-            <TrendingUp className="h-5 w-5 text-chart-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-chart-4">{clients.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {clients.filter(c => c.status === 'active').length} คน กำลังออกกำลังกาย
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Sessions */}
+      {/* Follow-up Clients - แสดงเฉพาะเมื่อมีลูกเทรนที่ต้องติดตาม */}
+      {followUpClients.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              นัดหมายวันนี้
-            </CardTitle>
-            <CardDescription>
-              เซสชันที่กำหนดไว้สำหรับวันนี้
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-accent" />
+                  ลูกเทรนที่ต้องติดตาม
+                </CardTitle>
+                <CardDescription>
+                  ลูกเทรนที่ไม่มีเซสชันมากกว่า 7 วัน
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={() => navigate('/clients')}
+                variant="outline"
+                size="sm"
+              >
+                ดูทั้งหมด
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {todaySessions.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">ไม่มีนัดหมายวันนี้</p>
-            ) : (
-              todaySessions.map(session => {
-                const client = getClientById(session.clientId);
-                if (!client) return null;
-                
-                const sessionTime = new Date(session.date).toLocaleTimeString('th-TH', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
+          <CardContent className="space-y-3">
+            {followUpClients.slice(0, 5).map(client => {
+              const lastSession = sessions
+                .filter(s => s.clientId === client.id && s.status === 'completed')
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+              
+              const daysSince = lastSession 
+                ? Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24))
+                : null;
 
-                return (
-                  <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+              return (
+                <Link key={client.id} to={`/clients/${client.id}`}>
+                  <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={client.avatar} alt={client.name} />
@@ -157,130 +231,36 @@ export default function Dashboard() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{client.name}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Clock className="h-4 w-4" />
-                          {sessionTime}
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {daysSince ? `${daysSince} วันที่แล้ว` : 'ยังไม่เคยมีเซสชัน'}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{client.goal}</Badge>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleStartSession(session.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Play className="h-4 w-4" />
-                        เริ่มเซสชัน
-                      </Button>
-                    </div>
+                    <Badge 
+                      variant={client.status === 'active' ? 'default' : 'secondary'}
+                    >
+                      {client.status === 'active' ? 'กำลังเทรนอยู่' : 'พักชั่วคราว'}
+                    </Badge>
                   </div>
-                );
-              })
-            )}
+                </Link>
+              );
+            })}
           </CardContent>
         </Card>
+      )}
 
-        {/* Follow-up Clients */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              ลูกเทรนที่ต้องติดตาม
-            </CardTitle>
-            <CardDescription>
-              ลูกเทรนที่ไม่มีเซสชันมากกว่า 7 วัน
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {followUpClients.length === 0 ? (
-              <div className="text-center py-4">
-                <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-2" />
-                <p className="text-muted-foreground">ลูกเทรนทุกคนมีเซสชันสม่ำเสมอ</p>
-              </div>
-            ) : (
-              followUpClients.slice(0, 5).map(client => {
-                const lastSession = sessions
-                  .filter(s => s.clientId === client.id && s.status === 'completed')
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                
-                const daysSince = lastSession 
-                  ? Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24))
-                  : null;
-
-                return (
-                  <Link key={client.id} to={`/clients/${client.id}`}>
-                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={client.avatar} alt={client.name} />
-                          <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{client.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {daysSince ? `${daysSince} วันที่แล้ว` : 'ยังไม่เคยมีเซสชัน'}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge 
-                        variant={client.status === 'active' ? 'default' : 'secondary'}
-                      >
-                        {client.status === 'active' ? 'กำลังออกกำลัง' : 'พักชั่วคราว'}
-                      </Badge>
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            การดำเนินการที่ใช้บ่อย
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Dialog open={showNewClientModal} onOpenChange={setShowNewClientModal}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Plus className="h-6 w-6" />
-                  เพิ่มลูกเทรนใหม่
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>เพิ่มลูกเทรนใหม่</DialogTitle>
-                  <DialogDescription>
-                    กรอกข้อมูลพื้นฐานของลูกเทรนใหม่
-                  </DialogDescription>
-                </DialogHeader>
-                <NewClientModal onClientCreated={handleNewClient} />
-              </DialogContent>
-            </Dialog>
-
-            <Link to="/programs">
-              <Button variant="outline" className="h-20 flex-col gap-2 w-full">
-                <Dumbbell className="h-6 w-6" />
-                สร้างโปรแกรมใหม่
-              </Button>
-            </Link>
-
-            <Link to="/calendar">
-              <Button variant="outline" className="h-20 flex-col gap-2 w-full">
-                <CalendarDays className="h-6 w-6" />
-                ดูปฏิทิน
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* New Client Modal */}
+      <Dialog open={showNewClientModal} onOpenChange={setShowNewClientModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>เพิ่มลูกเทรนใหม่</DialogTitle>
+            <DialogDescription>
+              กรอกข้อมูลพื้นฐานของลูกเทรนใหม่
+            </DialogDescription>
+          </DialogHeader>
+          <NewClientModal onClientCreated={handleNewClient} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

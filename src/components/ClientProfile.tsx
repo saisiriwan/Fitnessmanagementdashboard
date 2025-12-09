@@ -28,7 +28,7 @@ export default function ClientProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { getClientById, addSession } = useApp();
+  const { getClientById, addSession, sessions } = useApp();
   
   const activeTab = searchParams.get('tab') || 'overview';
   const client = getClientById(id!);
@@ -65,6 +65,21 @@ export default function ClientProfile() {
   };
 
   const statusBadge = getStatusBadge(client.status);
+
+  // Get last session date and upcoming session
+  const clientSessions = sessions.filter(s => s.clientId === client.id);
+  const completedSessions = clientSessions.filter(s => s.status === 'completed');
+  const upcomingSessions = clientSessions.filter(s => s.status === 'scheduled');
+  
+  const lastSession = completedSessions
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  
+  const nextSession = upcomingSessions
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+  const daysSinceLastSession = lastSession
+    ? Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
 
   return (
     <div className="space-y-6">
@@ -105,26 +120,89 @@ export default function ClientProfile() {
         </Button>
       </div>
 
+      {/* Key Information - แสดงข้อมูลสำคัญเป็นอันดับแรก */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-accent/30 bg-gradient-to-br from-accent/10 to-accent/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">เซสชันล่าสุด</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {lastSession ? (
+              <>
+                <div className="text-2xl font-bold text-accent">
+                  {daysSinceLastSession === 0 ? 'วันนี้' : `${daysSinceLastSession} วัน`}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {new Date(lastSession.date).toLocaleDateString('th-TH', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </p>
+              </>
+            ) : (
+              <div className="text-xl text-muted-foreground">ยังไม่เคยมีเซสชัน</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">เป้าหมาย</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-primary">{client.goal}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              เข้าร่วม {Math.floor((new Date().getTime() - new Date(client.joinDate).getTime()) / (1000 * 60 * 60 * 24))} วันแล้ว
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-chart-1/30 bg-gradient-to-br from-chart-1/10 to-chart-1/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">นัดหมายถัดไป</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {nextSession ? (
+              <>
+                <div className="text-xl font-bold text-chart-1">
+                  {new Date(nextSession.date).toLocaleDateString('th-TH', {
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {new Date(nextSession.date).toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </>
+            ) : (
+              <div className="text-xl text-muted-foreground">ไม่มีนัด</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Info */}
       <Card>
         <CardContent className="py-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <p className="text-gray-500">อีเมล</p>
+              <p className="text-muted-foreground">อีเมล</p>
               <p className="font-medium">{client.email}</p>
             </div>
             <div>
-              <p className="text-gray-500">โทรศัพท์</p>
+              <p className="text-muted-foreground">โทรศัพท์</p>
               <p className="font-medium">{client.phone || 'ไม่ระบุ'}</p>
             </div>
             <div>
-              <p className="text-gray-500">วันที่เข้าร่วม</p>
-              <p className="font-medium">
-                {new Date(client.joinDate).toLocaleDateString('th-TH')}
-              </p>
+              <p className="text-muted-foreground">เซสชันทั้งหมด</p>
+              <p className="font-medium">{completedSessions.length} เซสชัน</p>
             </div>
             <div>
-              <p className="text-gray-500">โปรแกรมปัจจุบัน</p>
+              <p className="text-muted-foreground">โปรแกรมปัจจุบัน</p>
               <p className="font-medium">{client.currentProgram ? 'มีโปรแกรม' : 'ยังไม่มีโปรแกรม'}</p>
             </div>
           </div>

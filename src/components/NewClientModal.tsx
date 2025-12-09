@@ -4,6 +4,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Alert, AlertDescription } from './ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useApp } from './AppContext';
 import { toast } from 'sonner@2.0.3';
 
@@ -12,14 +14,35 @@ interface NewClientModalProps {
 }
 
 export default function NewClientModal({ onClientCreated }: NewClientModalProps) {
-  const { addClient } = useApp();
+  const { addClient, clients } = useApp();
   const [formData, setFormData] = useState({
     name: '',
+    nickname: '',
     email: '',
     phone: '',
     goal: '',
     notes: ''
   });
+  const [duplicateNameWarning, setDuplicateNameWarning] = useState<string | null>(null);
+
+  const checkDuplicateName = (name: string) => {
+    if (!name.trim()) {
+      setDuplicateNameWarning(null);
+      return;
+    }
+
+    const duplicateClients = clients.filter(
+      client => client.name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+
+    if (duplicateClients.length > 0) {
+      setDuplicateNameWarning(
+        `พบชื่อซ้ำกับลูกเทรนที่มีอยู่แล้ว (${duplicateClients.length} คน) แนะนำให้ตั้งชื่อเล่นเพื่อแยกความแตกต่าง`
+      );
+    } else {
+      setDuplicateNameWarning(null);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +65,11 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Check for duplicate name when name field changes
+    if (field === 'name') {
+      checkDuplicateName(value);
+    }
   };
 
   return (
@@ -55,6 +83,27 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
           placeholder="กรอกชื่อ-นามสกุล"
           required
         />
+        {duplicateNameWarning && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              {duplicateNameWarning}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="nickname">ชื่อเล่น (สำหรับแยกความแตกต่าง)</Label>
+        <Input
+          id="nickname"
+          value={formData.nickname}
+          onChange={(e) => handleChange('nickname', e.target.value)}
+          placeholder="เช่น มลิวัน 1, มลิวัน 2"
+        />
+        <p className="text-xs text-muted-foreground">
+          ใช้ชื่อเล่นเพื่อแยกความแตกต่างเมื่อมีชื่อซ้ำกัน
+        </p>
       </div>
 
       <div className="space-y-2">

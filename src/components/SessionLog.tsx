@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from './ui/separator';
 import { useApp } from './AppContext';
 import { toast } from 'sonner@2.0.3';
+import SessionSummaryCard from './SessionSummaryCard';
 
 export default function SessionLog() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ export default function SessionLog() {
   // Coach Mode States
   const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
   const [showSummaryReview, setShowSummaryReview] = useState(false);
+  const [showSummaryCard, setShowSummaryCard] = useState(false);
   const [sessionSummary, setSessionSummary] = useState('');
   const [quickNotes, setQuickNotes] = useState('');
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -198,8 +200,8 @@ export default function SessionLog() {
 
   const getExerciseStatusIcon = (status?: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 className="h-4 w-4 text-primary" />;
-      case 'current': return <Play className="h-4 w-4 text-secondary" />;
+      case 'completed': return <CheckCircle2 className="h-4 w-4 text-accent" />;
+      case 'current': return <Play className="h-4 w-4 text-primary" />;
       case 'skipped': return <Minus className="h-4 w-4 text-gray-400" />;
       default: return <Circle className="h-4 w-4 text-gray-300" />;
     }
@@ -289,11 +291,19 @@ export default function SessionLog() {
               <div className="space-y-3">
                 <h4>สร้างการ์ดสรุป</h4>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowSummaryCard(true)}
+                  >
                     <Download className="h-4 w-4 mr-1" />
                     ดาวน์โหลด
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowSummaryCard(true)}
+                  >
                     <Share className="h-4 w-4 mr-1" />
                     แชร์ให้ลูกเทรน
                   </Button>
@@ -306,6 +316,16 @@ export default function SessionLog() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Session Summary Card Modal */}
+        <SessionSummaryCard
+          isOpen={showSummaryCard}
+          onClose={() => setShowSummaryCard(false)}
+          clientName={client.name}
+          sessionDate={session.date}
+          sessionData={sessionData}
+          sessionSummary={sessionSummary}
+        />
       </div>
     );
   }
@@ -703,11 +723,19 @@ export default function SessionLog() {
           <CardContent>
             <p>{session.summary}</p>
             <div className="flex gap-2 mt-4">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSummaryCard(true)}
+              >
                 <Download className="h-4 w-4 mr-1" />
                 ดาวน์โหลดการ์ด
               </Button>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSummaryCard(true)}
+              >
                 <Share className="h-4 w-4 mr-1" />
                 แชร์ให้ลูกเทรน
               </Button>
@@ -715,6 +743,16 @@ export default function SessionLog() {
           </CardContent>
         </Card>
       )}
+
+      {/* Session Summary Card Modal */}
+      <SessionSummaryCard
+        isOpen={showSummaryCard}
+        onClose={() => setShowSummaryCard(false)}
+        clientName={client.name}
+        sessionDate={session.date}
+        sessionData={sessionData}
+        sessionSummary={sessionSummary}
+      />
     </div>
   );
 }

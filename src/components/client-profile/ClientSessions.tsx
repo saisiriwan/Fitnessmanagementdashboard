@@ -71,47 +71,47 @@ export default function ClientSessions({ client }: ClientSessionsProps) {
     <div className="space-y-6">
       {/* Session Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-chart-1/30 bg-gradient-to-br from-chart-1/10 to-chart-1/5">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">เซสชันทั้งหมด</CardTitle>
-            <FileText className="h-4 w-4 text-chart-1" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clientSessions.length}</div>
+            <div className="text-2xl font-bold text-primary">{clientSessions.length}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
+        <Card className="border-accent/20 bg-gradient-to-br from-accent/10 to-accent/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">เสร็จสิ้น</CardTitle>
-            <div className="w-4 h-4 bg-primary rounded-full"></div>
+            <div className="w-4 h-4 bg-accent rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-accent">
               {clientSessions.filter(s => s.status === 'completed').length}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-chart-5/30 bg-gradient-to-br from-chart-5/10 to-chart-5/5">
+        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/10 to-chart-3/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำลังดำเนินการ</CardTitle>
-            <div className="w-4 h-4 bg-chart-5 rounded-full"></div>
+            <div className="w-4 h-4 bg-chart-3 rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-chart-3">
               {clientSessions.filter(s => s.status === 'in-progress').length}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-secondary/5">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">กำหนดไว้</CardTitle>
-            <div className="w-4 h-4 bg-secondary rounded-full"></div>
+            <div className="w-4 h-4 bg-primary rounded-full"></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {clientSessions.filter(s => s.status === 'scheduled').length}
             </div>
           </CardContent>
