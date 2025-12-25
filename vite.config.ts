@@ -1,16 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import tsconfigPaths from "vite-tsconfig-paths"; // ✅ เพิ่มปลั๊กอินนี้
+import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
 
 export default defineConfig({
   plugins: [
     react(),
-    tsconfigPaths(), // ✅ ปลั๊กอินอ่าน alias จาก tsconfig.json
+    tsconfigPaths(),
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // ✅ ให้ @ ชี้ไปที่ src/
+      "@": path.resolve(__dirname, "./src"),
     },
     extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
   },
