@@ -3,11 +3,12 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription } from './ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useApp } from './AppContext';
 import { toast } from 'sonner@2.0.3';
+import { TrainingGoal, TRAINING_GOALS } from '../types/goals';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface NewClientModalProps {
   onClientCreated: (clientId: string) => void;
@@ -20,7 +21,8 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
     nickname: '',
     email: '',
     phone: '',
-    goal: '',
+    goal: '', // Legacy field - kept for old goal text
+    primaryGoal: '' as TrainingGoal | '', // ✅ NEW: Training Goal (4 options)
     notes: ''
   });
   const [duplicateNameWarning, setDuplicateNameWarning] = useState<string | null>(null);
@@ -47,19 +49,40 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.goal) {
+    if (!formData.name || !formData.email || !formData.primaryGoal) {
       toast.error('กรุณากรอกข้อมูลที่จำเป็น');
       return;
     }
 
+    // ✅ เช็ค duplicate email
+    const existingClientWithEmail = clients.find(
+      c => c.email.toLowerCase() === formData.email.toLowerCase()
+    );
+
+    if (existingClientWithEmail) {
+      if (existingClientWithEmail.userId) {
+        // ลูกเทรนสมัคร account แล้ว → ไม่สามารถเพิ่มซ้ำได้
+        toast.error('อีเมลนี้มีการสมัครใช้งานแล้ว ไม่สามารถเพิ่มซ้ำได้');
+        return;
+      } else {
+        // มี profile แล้วแต่ยังไม่สมัคร (ไม่น่าจะเกิด แต่ป้องกันไว้)
+        toast.warning('พบข้อมูลลูกเทรนที่ใช้อีเมลนี้อยู่แล้ว');
+        return;
+      }
+    }
+
+    // สร้าง client ใหม่
     const clientId = addClient({
       ...formData,
+      goal: TRAINING_GOALS[formData.primaryGoal as TrainingGoal].label, // Set legacy goal field
+      primaryGoal: formData.primaryGoal as TrainingGoal, // ✅ NEW: Set training goal
       status: 'active',
       tags: [],
-      joinDate: new Date().toISOString().split('T')[0]
+      joinDate: new Date().toISOString().split('T')[0],
+      trainers: [] // เริ่มต้นยังไม่มีเทรนเนอร์ รอให้ลูกเทรนเชื่อมโยงเอง
     });
 
-    toast.success('เพิ่มลูกเทรนใหม่เรียบร้อยแล้ว');
+    toast.success('เพิ่มลูกเทรนใหม่เรียบร้อยแล้ว!');
     onClientCreated(clientId);
   };
 
@@ -116,6 +139,9 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
           placeholder="กรอกอีเมล"
           required
         />
+        <p className="text-xs text-muted-foreground">
+          💡 อีเมลใช้ในการเชื่อมโยง account อัตโนมัติเมื่อลูกเทรนสมัครสมาชิก
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -128,19 +154,29 @@ export default function NewClientModal({ onClientCreated }: NewClientModalProps)
         />
       </div>
 
+      {/* ✅ UPDATED: Training Goal Dropdown */}
       <div className="space-y-2">
-        <Label htmlFor="goal">เป้าหมาย *</Label>
-        <Select onValueChange={(value) => handleChange('goal', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="เลือกเป้าหมาย" />
+        <Label htmlFor="primaryGoal">เป้าหมาย *</Label>
+        <Select
+          value={formData.primaryGoal}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, primaryGoal: value as TrainingGoal }))}
+        >
+          <SelectTrigger id="primaryGoal" className="w-full">
+            <SelectValue placeholder="กรอกเป้าหมายของโปรแกรม" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ลดน้ำหนัก">ลดน้ำหนัก</SelectItem>
-            <SelectItem value="เพิ่มกล้ามเนื้อ">เพิ่มกล้ามเนื้อ</SelectItem>
-            <SelectItem value="เพิ่มความแข็งแรง">เพิ่มความแข็งแรง</SelectItem>
-            <SelectItem value="เพิ่มความอดทน">เพิ่มความอดทน</SelectItem>
-            <SelectItem value="สุขภาพทั่วไป">สุขภาพทั่วไป</SelectItem>
-            <SelectItem value="ฟื้นฟูสมรรถภาพ">ฟื้นฟูสมรรถภาพ</SelectItem>
+            {(Object.keys(TRAINING_GOALS) as TrainingGoal[]).map((goalKey) => {
+              const goal = TRAINING_GOALS[goalKey];
+              return (
+                <SelectItem key={goalKey} value={goalKey}>
+                  <div className="flex items-center gap-2">
+                    <span>{goal.icon}</span>
+                    <span>{goal.label}</span>
+                    <span className="text-xs text-gray-500">({goal.labelEn})</span>
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

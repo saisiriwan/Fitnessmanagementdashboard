@@ -17,9 +17,7 @@ import {
   BookOpen,
   BarChart3,
   Settings,
-  FileText,
-  Clock,
-  TrendingUp,
+  ClipboardEdit,
   UserPlus,
   CalendarPlus,
 } from 'lucide-react';
@@ -38,7 +36,7 @@ const actionCommands = [
   { icon: UserPlus, label: 'เพิ่มลูกเทรนใหม่', action: 'new-client', group: 'การดำเนินการ' },
   { icon: CalendarPlus, label: 'สร้างนัดหมาย', action: 'new-appointment', group: 'การดำเนินการ' },
   { icon: Dumbbell, label: 'สร้างโปรแกรมใหม่', action: 'new-program', group: 'การดำเนินการ' },
-  { icon: FileText, label: 'บันทึกเซสชัน', action: 'new-session', group: 'การดำเนินการ' },
+  { icon: ClipboardEdit, label: 'บันทึกการฝึก', action: 'new-session', group: 'การดำเนินการ' },
 ];
 
 interface CommandPaletteProps {

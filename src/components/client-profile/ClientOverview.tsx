@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Calendar, TrendingUp, FileText } from 'lucide-react';
+import { Play, Calendar, TrendingUp, FileText, Edit, Save } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -7,23 +7,25 @@ import { Progress } from '../ui/progress';
 import { Client } from '../AppContext';
 import { useApp } from '../AppContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useState } from 'react';
+import { Textarea } from '../ui/textarea';
 
 interface ClientOverviewProps {
   client: Client;
 }
 
 export default function ClientOverview({ client }: ClientOverviewProps) {
-  const { sessions, programs, addSession } = useApp();
+  const { sessions, addSession, updateClient } = useApp();
   const navigate = useNavigate();
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [personalNotes, setPersonalNotes] = useState(client.personalNotes || '');
 
   // Get client's sessions
   const clientSessions = sessions.filter(s => s.clientId === client.id);
   const completedSessions = clientSessions.filter(s => s.status === 'completed');
   const upcomingSessions = clientSessions.filter(s => s.status === 'scheduled');
   
-  // Get current program
-  const currentProgram = client.currentProgram ? programs.find(p => p.id === client.currentProgram) : null;
-
   // Get next session
   const nextSession = upcomingSessions
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
@@ -43,144 +45,84 @@ export default function ClientOverview({ client }: ClientOverviewProps) {
     navigate(`/sessions/${sessionId}/log`);
   };
 
+  const handleSaveNotes = () => {
+    updateClient(client.id, { personalNotes });
+    setIsEditingNotes(false);
+    toast.success('บันทึกโน้ตส่วนตัวเรียบร้อย');
+  };
+
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">เซสชันทั้งหมด</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedSessions.length}</div>
-            <p className="text-xs text-muted-foreground">
-              เซสชันที่เสร็จสิ้น
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">สัปดาห์นี้</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{thisWeekSessions}</div>
-            <p className="text-xs text-muted-foreground">
-              จาก {weeklyGoal} ที่กำหนด
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">นัดถัดไป</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {nextSession ? new Date(nextSession.date).getDate() : '-'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {nextSession 
-                ? new Date(nextSession.date).toLocaleDateString('th-TH', { month: 'short' })
-                : 'ไม่มีนัด'
-              }
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Goals & Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle>เป้าหมายและความก้าวหน้า</CardTitle>
-            <CardDescription>
-              ติดตามความก้าวหน้าต่อเป้าหมายรายสัปดาห์
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* ✅ Personal Notes Section */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">เป้าหมายหลัก</p>
-                <Badge variant="outline">{client.goal}</Badge>
-              </div>
-              <p className="text-sm text-gray-600">
-                {client.notes || 'ไม่มีหมายเหตุเพิ่มเติม'}
-              </p>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                โน้ตส่วนตัว
+              </CardTitle>
+              <CardDescription>
+                บันทึกข้อมูลสำคัญที่ต้องจำ - สิ่งที่คุยครั้งที่แล้ว, ความชอบ/ไม่ชอบ, หรือข้อควรระวัง
+              </CardDescription>
             </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">ความก้าวหน้าสัปดาห์นี้</p>
-                <p className="text-sm text-gray-600">{thisWeekSessions}/{weeklyGoal} เซสชัน</p>
-              </div>
-              <Progress value={progressPercentage} className="h-2" />
-            </div>
-
-            {client.tags.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">แท็ก</p>
-                <div className="flex flex-wrap gap-2">
-                  {client.tags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Current Program */}
-        <Card>
-          <CardHeader>
-            <CardTitle>โปรแกรมปัจจุบัน</CardTitle>
-            <CardDescription>
-              โปรแกรมการออกกำลังกายที่กำลังดำเนินการ
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {currentProgram ? (
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">{currentProgram.name}</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {currentProgram.description}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">ระยะเวลา</p>
-                    <p className="font-medium">{currentProgram.duration} สัปดาห์</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">ความถี่</p>
-                    <p className="font-medium">{currentProgram.daysPerWeek} วัน/สัปดาห์</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500 mb-2">ความก้าวหน้าโปรแกรม</p>
-                  <Progress value={35} className="h-2" />
-                  <p className="text-xs text-gray-500 mt-1">สัปดาห์ 3 จาก 8</p>
-                </div>
-              </div>
+            {isEditingNotes ? (
+              <Button size="sm" onClick={handleSaveNotes}>
+                <Save className="h-4 w-4 mr-1" />
+                บันทึก
+              </Button>
             ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-500 mb-4">ยังไม่มีโปรแกรมที่กำหนด</p>
-                <Button variant="outline" size="sm">
-                  มอบหมายโปรแกรม
-                </Button>
-              </div>
+              <Button size="sm" variant="outline" onClick={() => setIsEditingNotes(true)}>
+                <Edit className="h-4 w-4 mr-1" />
+                แก้ไข
+              </Button>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isEditingNotes ? (
+            <Textarea
+              value={personalNotes}
+              onChange={(e) => setPersonalNotes(e.target.value)}
+              placeholder="เช่น: ชอบ Deadlift, ไม่ชอบ Burpee, มีปัญหาเข่าเล็กน้อย, คุยเรื่องงานครั้งที่แล้ว..."
+              rows={4}
+              className="resize-none"
+            />
+          ) : (
+            <div className="min-h-[100px] p-4 bg-muted/30 rounded-md">
+              {personalNotes ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{personalNotes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  ยังไม่มีโน้ตส่วนตัว - คลิก \"แก้ไข\" เพื่อเพิ่มข้อมูล
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ✅ Session Count Card */}
+      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            สถิติการฝึก
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+              <p className="text-3xl font-bold text-primary">{completedSessions.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">ครั้งที่มาฝึกแล้ว</p>
+            </div>
+            <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+              <p className="text-3xl font-bold text-accent">{upcomingSessions.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">นัดหมายที่รออยู่</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>
@@ -194,7 +136,7 @@ export default function ClientOverview({ client }: ClientOverviewProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button onClick={handleStartSession} className="h-16 flex-col gap-2">
               <Play className="h-5 w-5" />
-              เริ่มเซสชันใหม่
+              เปิดบันทึก
             </Button>
             
             <Button variant="outline" className="h-16 flex-col gap-2">
@@ -213,15 +155,15 @@ export default function ClientOverview({ client }: ClientOverviewProps) {
       {/* Recent Sessions */}
       <Card>
         <CardHeader>
-          <CardTitle>เซสชันล่าสุด</CardTitle>
+          <CardTitle>การฝึกล่าสุด</CardTitle>
           <CardDescription>
-            เซสชันที่เสร็จสิ้นล่าสุด 5 ครั้ง
+            การฝึกที่เสร็จสิ้นล่าสุด 5 ครั้ง
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {completedSessions.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">ยังไม่มีเซสชันที่เสร็จสิ้น</p>
+              <p className="text-gray-500 text-center py-4">ยังไม่มีการฝึกที่เสร็จสิ้น</p>
             ) : (
               completedSessions
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -232,8 +174,8 @@ export default function ClientOverview({ client }: ClientOverviewProps) {
                       <p className="font-medium">
                         {new Date(session.date).toLocaleDateString('th-TH')}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {session.duration ? `${Math.floor(session.duration / 60)} นาที` : 'ไม่ระบุเวลา'} • 
+                      <p className="text-sm text-gray-500">{
+                        session.duration ? `${Math.floor(session.duration / 60)} นาที` : 'ไม่ระบุเวลา'} • 
                         {session.exercises.length} ท่า
                       </p>
                     </div>

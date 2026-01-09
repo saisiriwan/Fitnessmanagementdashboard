@@ -110,49 +110,6 @@ export default function ClientNotes({ client }: ClientNotesProps) {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">โน้ตทั้งหมด</CardTitle>
-            <StickyNote className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{noteStats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">สัปดาห์นี้</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{noteStats.thisWeek}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ความก้าวหน้า</CardTitle>
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{noteStats.byType.progress || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ฟีดแบ็ก</CardTitle>
-            <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{noteStats.byType.feedback || 0}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Add New Note */}
       <Card>
         <CardHeader>
@@ -171,10 +128,10 @@ export default function ClientNotes({ client }: ClientNotesProps) {
                   เพิ่มโน้ต
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md" aria-describedby="new-note-description">
                 <DialogHeader>
                   <DialogTitle>เพิ่มโน้ตใหม่</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription id="new-note-description">
                     บันทึกข้อมูลสำคัญหรือความคิดเห็นเกี่ยวกับลูกเทรน
                   </DialogDescription>
                 </DialogHeader>
@@ -302,7 +259,7 @@ export default function ClientNotes({ client }: ClientNotesProps) {
               },
               {
                 title: 'มีแรงจูงใจสูง',
-                content: 'วันนี้มีแรงจูงใจและพลังในการออกกำลังกายสูงมาก ทำให้เซสชันเป็นไปได้ดี',
+                content: 'วันนี้มีแรงจูงใจและพลังในการออกกำลังกายสูงมาก ทำให้การฝึกเป็นไปได้ดี',
                 type: 'feedback'
               },
               {

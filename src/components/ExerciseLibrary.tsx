@@ -1,31 +1,50 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, BookOpen, Dumbbell } from 'lucide-react';
+import { Search, Plus, Filter, BookOpen, Dumbbell, Activity, Target, Trash2, Eye, MoreVertical, Edit, SlidersHorizontal } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Checkbox } from './ui/checkbox';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Separator } from './ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { useApp } from './AppContext';
 import { toast } from 'sonner@2.0.3';
+import ExerciseForm from './ExerciseForm';
 
 export default function ExerciseLibrary() {
-  const { exercises, addExercise } = useApp();
+  const { exercises, addExercise, updateExercise, deleteExercise } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [modalityFilter, setModalityFilter] = useState('all');
   const [muscleGroupFilter, setMuscleGroupFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newExercise, setNewExercise] = useState({
-    name: '',
-    modality: 'strength' as const,
-    muscleGroups: [] as string[],
-    movementPattern: '',
-    instructions: '',
-    category: ''
-  });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
+  const [exerciseToEdit, setExerciseToEdit] = useState<any>(null);
+  const [selectedExercise, setSelectedExercise] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Mobile filter sheet
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Filter exercises
   const filteredExercises = exercises.filter(exercise => {
@@ -33,8 +52,9 @@ export default function ExerciseLibrary() {
     const matchesModality = modalityFilter === 'all' || exercise.modality === modalityFilter;
     const matchesMuscleGroup = muscleGroupFilter === 'all' || 
       exercise.muscleGroups.some(group => group.toLowerCase().includes(muscleGroupFilter.toLowerCase()));
+    const matchesType = typeFilter === 'all' || (typeFilter === 'default' ? exercise.isDefault : !exercise.isDefault);
     
-    return matchesSearch && matchesModality && matchesMuscleGroup;
+    return matchesSearch && matchesModality && matchesMuscleGroup && matchesType;
   });
 
   const muscleGroups = [
@@ -42,316 +62,502 @@ export default function ExerciseLibrary() {
     'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Biceps', 'Triceps'
   ];
 
-  const handleAddExercise = () => {
-    if (!newExercise.name || !newExercise.movementPattern) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็น');
-      return;
-    }
-
-    addExercise(newExercise);
-    toast.success('เพิ่มท่าใหม่เรียบร้อยแล้ว');
-    setShowAddModal(false);
-    setNewExercise({
-      name: '',
-      modality: 'strength',
-      muscleGroups: [],
-      movementPattern: '',
-      instructions: '',
-      category: ''
-    });
-  };
-
-  const handleMuscleGroupChange = (group: string, checked: boolean) => {
-    if (checked) {
-      setNewExercise(prev => ({
-        ...prev,
-        muscleGroups: [...prev.muscleGroups, group]
-      }));
-    } else {
-      setNewExercise(prev => ({
-        ...prev,
-        muscleGroups: prev.muscleGroups.filter(g => g !== group)
-      }));
-    }
-  };
-
-  const getModalityBadge = (modality: string) => {
+  const getModalityConfig = (modality: string) => {
+    const normalizedModality = modality.toLowerCase();
+    
     const modalityMap = {
-      strength: { label: 'เสริมแรง', color: 'bg-red-100 text-red-800' },
-      cardio: { label: 'คาร์ดิโอ', color: 'bg-green-100 text-green-800' },
-      flexibility: { label: 'ยืดหยุ่น', color: 'bg-blue-100 text-blue-800' },
-      mobility: { label: 'เคลื่อนไหว', color: 'bg-purple-100 text-purple-800' }
+      strength: { 
+        label: 'เสริมแรง', 
+        bgColor: 'bg-blue-50',
+        textColor: 'text-blue-700',
+        borderColor: 'border-blue-200',
+        icon: Dumbbell
+      },
+      cardio: { 
+        label: 'คาร์ดิโอ', 
+        bgColor: 'bg-green-50',
+        textColor: 'text-green-700',
+        borderColor: 'border-green-200',
+        icon: Activity
+      },
+      flexibility: { 
+        label: 'ยืดหยุ่น', 
+        bgColor: 'bg-purple-50',
+        textColor: 'text-purple-700',
+        borderColor: 'border-purple-200',
+        icon: Target
+      },
+      mobility: { 
+        label: 'เคลื่อนไหว', 
+        bgColor: 'bg-orange-50',
+        textColor: 'text-orange-700',
+        borderColor: 'border-orange-200',
+        icon: Activity
+      }
     };
     
-    return modalityMap[modality as keyof typeof modalityMap] || { label: modality, color: 'bg-gray-100 text-gray-800' };
+    if (normalizedModality.includes('cardio') || normalizedModality.includes('คาร์ดิโอ')) {
+      return modalityMap.cardio;
+    }
+    if (normalizedModality.includes('strength') || normalizedModality.includes('เสริมแรง') || normalizedModality.includes('ความแข็งแรง')) {
+      return modalityMap.strength;
+    }
+    if (normalizedModality.includes('flexibility') || normalizedModality.includes('ยืด')) {
+      return modalityMap.flexibility;
+    }
+    if (normalizedModality.includes('mobility') || normalizedModality.includes('เคลื่อนไหว')) {
+      return modalityMap.mobility;
+    }
+    
+    return modalityMap[normalizedModality as keyof typeof modalityMap] || { 
+      label: modality, 
+      bgColor: 'bg-gray-50',
+      textColor: 'text-gray-700',
+      borderColor: 'border-gray-200',
+      icon: Dumbbell
+    };
   };
 
+  // Active filters count
+  const activeFiltersCount = [
+    modalityFilter !== 'all',
+    muscleGroupFilter !== 'all',
+    typeFilter !== 'all'
+  ].filter(Boolean).length;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">คลังท่าออกกำลังกาย</h1>
-          <p className="text-gray-600">จัดการและค้นหาท่าออกกำลังกาย</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6">
+        {/* Header Section */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#002140] flex items-center justify-center">
+              <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-[#002140]">คลังท่าออกกำลังกาย</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">จัดการและค้นหาท่าออกกำลังกายทั้งหมด</p>
+            </div>
+          </div>
         </div>
-        
-        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              เพิ่มท่าใหม่
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>เพิ่มท่าออกกำลังกายใหม่</DialogTitle>
-              <DialogDescription>
-                กรอกข้อมูลของท่าออกกำลังกายใหม่
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="exerciseName">ชื่อท่า *</Label>
+
+        {/* Search & Filter Section */}
+        <Card className="border-[#002140]/10 shadow-sm">
+          <CardContent className="p-4 md:p-6">
+            {/* Mobile Search + Filter Button */}
+            <div className="md:hidden space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  id="exerciseName"
-                  value={newExercise.name}
-                  onChange={(e) => setNewExercise(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="เช่น Barbell Squat"
+                  placeholder="ค้นหาชื่อท่า..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-11"
                 />
               </div>
-
-              <div>
-                <Label htmlFor="modality">ประเภท</Label>
-                <Select 
-                  value={newExercise.modality} 
-                  onValueChange={(value: any) => setNewExercise(prev => ({ ...prev, modality: value }))}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-11"
+                  onClick={() => setShowMobileFilters(true)}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  ตัวกรอง
+                  {activeFiltersCount > 0 && (
+                    <Badge className="ml-2 bg-accent text-white h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+                <Button 
+                  className="h-11 bg-[#FF6B35] hover:bg-[#FF6B35]/90"
+                  onClick={() => setShowAddModal(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Desktop Search + Filters */}
+            <div className="hidden md:flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                  <Input
+                    placeholder="ค้นหาชื่อท่า..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-12 border-gray-200 focus:border-[#002140] focus:ring-[#002140]"
+                  />
+                </div>
+              </div>
+              
+              {/* Filters */}
+              <div className="flex gap-3">
+                <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                  <SelectTrigger className="w-[160px] h-12 border-gray-200">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="ประเภท" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">ทุกประเภท</SelectItem>
                     <SelectItem value="strength">เสริมแรง</SelectItem>
                     <SelectItem value="cardio">คาร์ดิโอ</SelectItem>
                     <SelectItem value="flexibility">ยืดหยุ่น</SelectItem>
-                    <SelectItem value="mobility">เคลื่อนไหว</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={muscleGroupFilter} onValueChange={setMuscleGroupFilter}>
+                  <SelectTrigger className="w-[160px] h-12 border-gray-200">
+                    <SelectValue placeholder="กล้ามเนื้อ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกกลุ่มกล้าม</SelectItem>
+                    {muscleGroups.map(group => (
+                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[160px] h-12 border-gray-200">
+                    <SelectValue placeholder="ประเภทท่า" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    <SelectItem value="default">ท่าของระบบ</SelectItem>
+                    <SelectItem value="custom">ท่าของฉัน</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Add Exercise Button */}
+                <Button 
+                  size="lg" 
+                  className="h-12 bg-[#FF6B35] hover:bg-[#FF6B35]/90 gap-2"
+                  onClick={() => setShowAddModal(true)}
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="hidden sm:inline">เพิ่มท่าใหม่</span>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Mobile Filter Sheet */}
+        <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+          <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl">
+            <SheetHeader>
+              <SheetTitle>ตัวกรอง</SheetTitle>
+              <SheetDescription>เลือกเกณฑ์การกรองท่าออกกำลังกาย</SheetDescription>
+            </SheetHeader>
+            <div className="space-y-6 mt-6 overflow-y-auto h-[calc(100%-8rem)] pb-6">
+              {/* Modality Filter */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">ประเภทการฝึก</label>
+                <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="ประเภท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกประเภท</SelectItem>
+                    <SelectItem value="strength">เสริมแรง</SelectItem>
+                    <SelectItem value="cardio">คาร์ดิโอ</SelectItem>
+                    <SelectItem value="flexibility">ยืดหยุ่น</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label>กล้ามเนื้อที่ใช้ (เลือกได้สูงสุด 3 กลุ่ม)</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {muscleGroups.map(group => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={group}
-                        checked={newExercise.muscleGroups.includes(group)}
-                        onCheckedChange={(checked) => handleMuscleGroupChange(group, checked as boolean)}
-                        disabled={!newExercise.muscleGroups.includes(group) && newExercise.muscleGroups.length >= 3}
-                      />
-                      <Label htmlFor={group} className="text-sm">{group}</Label>
-                    </div>
-                  ))}
-                </div>
+              {/* Muscle Group Filter */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">กลุ่มกล้ามเนื้อ</label>
+                <Select value={muscleGroupFilter} onValueChange={setMuscleGroupFilter}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="กล้ามเนื้อ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกกลุ่มกล้าม</SelectItem>
+                    {muscleGroups.map(group => (
+                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <Label htmlFor="movementPattern">รูปแบบการเคลื่อนไหว *</Label>
-                <Input
-                  id="movementPattern"
-                  value={newExercise.movementPattern}
-                  onChange={(e) => setNewExercise(prev => ({ ...prev, movementPattern: e.target.value }))}
-                  placeholder="เช่น Squat, Push, Pull, Hinge"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category">หมวดหมู่</Label>
-                <Input
-                  id="category"
-                  value={newExercise.category}
-                  onChange={(e) => setNewExercise(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="เช่น Compound, Isolation"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="instructions">คำแนะนำการทำท่า</Label>
-                <Textarea
-                  id="instructions"
-                  value={newExercise.instructions}
-                  onChange={(e) => setNewExercise(prev => ({ ...prev, instructions: e.target.value }))}
-                  placeholder="อธิบายวิธีการทำท่าและข้อควรระวัง"
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                  ยกเลิก
-                </Button>
-                <Button onClick={handleAddExercise}>
-                  บันทึก
-                </Button>
+              {/* Type Filter */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">ประเภทท่า</label>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="ประเภทท่า" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    <SelectItem value="default">ท่าของระบบ</SelectItem>
+                    <SelectItem value="custom">ท่าของฉัน</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ท่าทั้งหมด</CardTitle>
-            <BookOpen className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{exercises.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-secondary/20 bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">เสริมแรง</CardTitle>
-            <Dumbbell className="h-4 w-4 text-secondary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-secondary">
-              {exercises.filter(e => e.modality === 'strength').length}
+            {/* Actions */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setModalityFilter('all');
+                  setMuscleGroupFilter('all');
+                  setTypeFilter('all');
+                }}
+              >
+                รีเซ็ต
+              </Button>
+              <Button
+                className="flex-1 bg-[#002140] hover:bg-[#002140]/90"
+                onClick={() => setShowMobileFilters(false)}
+              >
+                แสดงผล ({filteredExercises.length})
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-chart-3/20 bg-gradient-to-br from-chart-3/10 to-chart-3/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">คาร์ดิโอ</CardTitle>
-            <div className="w-4 h-4 bg-chart-3 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-chart-3">
-              {exercises.filter(e => e.modality === 'cardio').length}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-chart-4/20 bg-gradient-to-br from-chart-4/10 to-chart-4/5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ยืดหยุ่น</CardTitle>
-            <div className="w-4 h-4 bg-chart-4 rounded-full"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-chart-4">
-              {exercises.filter(e => e.modality === 'flexibility').length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </SheetContent>
+        </Sheet>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>ค้นหาและกรอง</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="ค้นหาชื่อท่า..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select value={modalityFilter} onValueChange={setModalityFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="ประเภท" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ประเภททั้งหมด</SelectItem>
-                <SelectItem value="strength">เสริมแรง</SelectItem>
-                <SelectItem value="cardio">คาร์ดิโอ</SelectItem>
-                <SelectItem value="flexibility">ยืดหยุ่น</SelectItem>
-                <SelectItem value="mobility">เคลื่อนไหว</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={muscleGroupFilter} onValueChange={setMuscleGroupFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="กล้ามเนื้อ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">กล้ามเนื้อทั้งหมด</SelectItem>
-                {muscleGroups.map(group => (
-                  <SelectItem key={group} value={group}>{group}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Stats Indicators */}
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-[#002140] rounded-full"></div>
+            <span className="text-xs md:text-sm text-muted-foreground">ทั้งหมด:</span>
+            <span className="text-xs md:text-sm font-semibold text-[#002140]">{exercises.length}</span>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Exercise Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredExercises.length === 0 ? (
-          <div className="col-span-full text-center py-8">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">ไม่พบท่าออกกำลังกาย</p>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+            <span className="text-xs md:text-sm text-muted-foreground">เสริมแรง:</span>
+            <span className="text-xs md:text-sm font-semibold text-blue-600">{exercises.filter(e => e.modality === 'strength').length}</span>
           </div>
-        ) : (
-          filteredExercises.map(exercise => {
-            const modalityBadge = getModalityBadge(exercise.modality);
-            
-            return (
-              <Card key={exercise.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                    <Badge className={modalityBadge.color}>
-                      {modalityBadge.label}
-                    </Badge>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+            <span className="text-xs md:text-sm text-muted-foreground">คาร์ดิโอ:</span>
+            <span className="text-xs md:text-sm font-semibold text-green-600">{exercises.filter(e => e.modality === 'cardio').length}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+            <span className="text-xs md:text-sm text-muted-foreground">ยืดหยุ่น:</span>
+            <span className="text-xs md:text-sm font-semibold text-purple-600">{exercises.filter(e => e.modality === 'flexibility').length}</span>
+          </div>
+        </div>
+
+        {/* Exercise Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {filteredExercises.length === 0 ? (
+            <div className="col-span-full">
+              <Card className="border-dashed border-2 border-gray-200">
+                <CardContent className="text-center py-12 md:py-16">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
                   </div>
-                  <CardDescription>{exercise.movementPattern}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">กล้ามเนื้อที่ใช้:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {exercise.muscleGroups.map(group => (
-                          <Badge key={group} variant="outline" className="text-xs">
-                            {group}
+                  <p className="text-gray-500 mb-2">ไม่พบท่าออกกำลังกาย</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">ลองปรับเปลี่ยนตัวกรองหรือคำค้นหา</p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            filteredExercises.map(exercise => {
+              const config = getModalityConfig(exercise.modality);
+              const Icon = config.icon;
+              
+              return (
+                <Card 
+                  key={exercise.id} 
+                  className={`group hover:shadow-lg transition-all duration-300 border-l-4 ${config.borderColor} hover:-translate-y-1`}
+                >
+                  <CardHeader className="pb-3 md:pb-4">
+                    <div className="flex items-start justify-between gap-2 md:gap-3 mb-2">
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`h-4 w-4 md:h-5 md:w-5 ${config.textColor}`} />
+                      </div>
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                        <Badge className={`${config.bgColor} ${config.textColor} border-0 text-xs`}>
+                          {config.label}
+                        </Badge>
+                        {exercise.isDefault ? (
+                          <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs">
+                            ระบบ
                           </Badge>
-                        ))}
+                        ) : (
+                          <Badge className="bg-orange-100 text-orange-700 border-orange-300 text-xs">
+                            กำหนดเอง
+                          </Badge>
+                        )}
+                        {/* Dropdown Menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 md:h-8 md:w-8 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExerciseToEdit(exercise);
+                                setShowEditModal(true);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              แก้ไข
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExerciseToDelete(exercise.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                              disabled={exercise.isDefault}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {exercise.isDefault ? 'ลบไม่ได้ (ระบบ)' : 'ลบ'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
+                    <CardTitle className="text-base md:text-lg leading-tight mb-1">
+                      {exercise.name}
+                    </CardTitle>
+                    <CardDescription className="text-xs md:text-sm line-clamp-2">
+                      {exercise.movementPattern}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-3 md:space-y-4">
+                    {/* Muscle Groups */}
+                    {exercise.muscleGroups.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">กล้ามเนื้อที่ใช้</p>
+                        <div className="flex flex-wrap gap-1 md:gap-1.5">
+                          {exercise.muscleGroups.slice(0, 3).map(group => (
+                            <Badge 
+                              key={group} 
+                              variant="outline" 
+                              className="text-xs px-1.5 md:px-2 py-0.5 border-gray-200 text-gray-600"
+                            >
+                              {group}
+                            </Badge>
+                          ))}
+                          {exercise.muscleGroups.length > 3 && (
+                            <Badge variant="outline" className="text-xs px-1.5 md:px-2 py-0.5">
+                              +{exercise.muscleGroups.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     
+                    {/* Instructions Preview */}
                     {exercise.instructions && (
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">คำแนะนำ:</p>
-                        <p className="text-sm text-gray-700 line-clamp-2">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">คำแนะนำ</p>
+                        <p className="text-xs md:text-sm text-gray-600 line-clamp-2 leading-relaxed">
                           {exercise.instructions}
                         </p>
                       </div>
                     )}
-                    
-                    <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" className="flex-1">
-                        ใช้ในโปรแกรม
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        เพิ่มในเซสชัน
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
+
+                    {/* View Details Button */}
+                    <Button
+                      variant="outline"
+                      className="w-full mt-3 md:mt-4 h-9 md:h-10 text-xs md:text-sm"
+                      onClick={() => {
+                        setSelectedExercise(exercise);
+                        setShowDetailModal(true);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5 md:h-4 md:w-4 mr-2" />
+                      ดูรายละเอียดเต็ม
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
       </div>
+
+      {/* Mobile FAB */}
+      <div className="md:hidden fixed bottom-20 right-4 z-40">
+        <Button
+          onClick={() => setShowAddModal(true)}
+          size="lg"
+          className="rounded-full w-14 h-14 shadow-xl bg-[#FF6B35] hover:bg-[#FF6B35]/90"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent aria-describedby="delete-exercise-alert-description" className="max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบท่าออกกำลังกาย</AlertDialogTitle>
+            <AlertDialogDescription id="delete-exercise-alert-description">
+              คุณแน่ใจหรือไม่ว่าต้องการลบ "{exercises.find(e => e.id === exerciseToDelete)?.name}"? การดำเนินการนี้ไม่สามารถยกเลิกได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (exerciseToDelete) {
+                  deleteExercise(exerciseToDelete);
+                  toast.success('ลบท่าออกกำลังกายเรียบร้อยแล้ว');
+                  setExerciseToDelete(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Exercise Form */}
+      <ExerciseForm
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={(formData: any) => {
+          addExercise(formData);
+          toast.success('เพิ่มท่าใหม่เรียบร้อยแล้ว');
+        }}
+      />
+
+      {/* Edit Exercise Form */}
+      <ExerciseForm
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setExerciseToEdit(null);
+        }}
+        initialData={exerciseToEdit}
+        onSave={(formData: any) => {
+          if (exerciseToEdit) {
+            updateExercise(exerciseToEdit.id, formData);
+            toast.success('แก้ไขท่าเรียบร้อยแล้ว');
+          }
+        }}
+      />
     </div>
   );
 }

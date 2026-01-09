@@ -1,758 +1,980 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Check, Download, Share, Printer, MoreHorizontal, ChevronRight, CheckCircle2, Circle, Minus, Play, Edit3, SkipForward, FileText, Zap, ClipboardPaste } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Printer, 
+  Save,
+  CheckCircle2, 
+  Circle, 
+  Calendar,
+  User,
+  Dumbbell,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  BookOpen,
+  Trash2,
+  MoreHorizontal,
+  Info,
+  TrendingUp,
+  Activity,
+  Target
+} from 'lucide-react';
 import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { VisuallyHidden } from './ui/visually-hidden';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Separator } from './ui/separator';
 import { useApp } from './AppContext';
 import { toast } from 'sonner@2.0.3';
+import { Progress } from './ui/progress';
 import SessionSummaryCard from './SessionSummaryCard';
+import SessionCompletionForm, { SessionCompletionData } from './SessionCompletionForm';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+
+interface ExerciseSet {
+  reps: number;
+  weight: number;
+  rpe?: number;
+  completed: boolean;
+}
+
+interface SessionExercise {
+  exerciseId: string;
+  sets: ExerciseSet[];
+  notes: string;
+  completed: boolean;
+}
 
 export default function SessionLog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSessionById, getClientById, updateSession, exercises } = useApp();
+  const { 
+    getSessionById, 
+    getClientById, 
+    getExerciseById, 
+    getProgramTemplateById,
+    updateSession,
+    programInstances,
+    exercises, 
+    sessions,
+  } = useApp();
   
-  // Coach Mode States
-  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
-  const [showSummaryReview, setShowSummaryReview] = useState(false);
-  const [showSummaryCard, setShowSummaryCard] = useState(false);
-  const [sessionSummary, setSessionSummary] = useState('');
-  const [quickNotes, setQuickNotes] = useState('');
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [showEditSetModal, setShowEditSetModal] = useState(false);
-  const [editingSet, setEditingSet] = useState<{exerciseIndex: number, setIndex: number} | null>(null);
-  const [showQuickFillModal, setShowQuickFillModal] = useState(false);
-  const [quickFillMode, setQuickFillMode] = useState<'planned' | 'per-exercise' | 'bulk'>('planned');
-
   const session = getSessionById(id!);
   const client = session ? getClientById(session.clientId) : null;
-
-  // Mock session data with planned workout
-  const [sessionData, setSessionData] = useState({
-    exercises: [
-      {
-        id: '1',
-        name: 'Barbell Squat',
-        category: 'legs',
-        status: 'current', // current, completed, pending, skipped
-        sets: [
-          { planned: { reps: 10, weight: 60 }, actual: null, completed: false },
-          { planned: { reps: 10, weight: 60 }, actual: null, completed: false },
-          { planned: { reps: 8, weight: 65 }, actual: null, completed: false },
-        ]
-      },
-      {
-        id: '2', 
-        name: 'Bench Press',
-        category: 'chest',
-        status: 'pending',
-        sets: [
-          { planned: { reps: 8, weight: 50 }, actual: null, completed: false },
-          { planned: { reps: 8, weight: 50 }, actual: null, completed: false },
-          { planned: { reps: 6, weight: 55 }, actual: null, completed: false },
-        ]
-      },
-      {
-        id: '3',
-        name: 'Barbell Row',
-        category: 'back', 
-        status: 'pending',
-        sets: [
-          { planned: { reps: 12, weight: 40 }, actual: null, completed: false },
-          { planned: { reps: 12, weight: 40 }, actual: null, completed: false },
-          { planned: { reps: 10, weight: 45 }, actual: null, completed: false },
-        ]
-      }
-    ]
-  });
-
-  // Find current exercise
-  const currentExercise = sessionData.exercises[currentExerciseIndex];
   
-  // Auto-advance to next exercise when all sets are completed
-  React.useEffect(() => {
-    if (currentExercise && currentExercise.sets.every(set => set.completed)) {
-      const nextIncompleteIndex = sessionData.exercises.findIndex((ex, idx) => 
-        idx > currentExerciseIndex && ex.status !== 'completed' && ex.status !== 'skipped'
-      );
-      if (nextIncompleteIndex !== -1) {
-        setCurrentExerciseIndex(nextIncompleteIndex);
-        // Update exercise status
-        setSessionData(prev => ({
-          ...prev,
-          exercises: prev.exercises.map((ex, idx) => 
-            idx === currentExerciseIndex ? { ...ex, status: 'completed' } : ex
-          )
-        }));
+  // Session State
+  const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>([]);
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [sessionDate, setSessionDate] = useState('');
+  const [expandedExercises, setExpandedExercises] = useState<Set<number>>(new Set([0]));
+  const [showSummaryCard, setShowSummaryCard] = useState(false);
+  const [showCompletionForm, setShowCompletionForm] = useState(false);
+  const [completionData, setCompletionData] = useState<SessionCompletionData | null>(null);
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
+  
+  // Dialog states
+  const [showExerciseDialog, setShowExerciseDialog] = useState(false);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string>('');
+  const [exerciseSets, setExerciseSets] = useState(3);
+  const [exerciseReps, setExerciseReps] = useState(10);
+
+  // Get assigned program for this client
+  const assignedProgramInstance = client 
+    ? programInstances.find(pi => pi.clientId === client.id && pi.status === 'active')
+    : null;
+  const assignedProgram = assignedProgramInstance
+    ? getProgramTemplateById(assignedProgramInstance.templateId)
+    : null;
+
+  // Get client's completed sessions for this program
+  const clientCompletedSessions = client && assignedProgramInstance
+    ? sessions.filter(s => 
+        s.clientId === client.id && 
+        s.status === 'completed' && 
+        s.programInstanceId === assignedProgramInstance.id
+      )
+    : [];
+
+  // Calculate current day in program
+  const getCurrentProgramDay = () => {
+    if (!assignedProgram || !assignedProgramInstance) return null;
+
+    // Count completed sessions to determine current day
+    const completedCount = clientCompletedSessions.length;
+    
+    // Calculate which day we should be on (0-indexed, then +1 for display)
+    let currentDayIndex = completedCount;
+    
+    // Flatten all days from all weeks
+    const allDays: Array<{ week: number; day: any; dayIndex: number }> = [];
+    let dayCounter = 0;
+    
+    assignedProgram.weeks.forEach(week => {
+      week.days.forEach(day => {
+        allDays.push({
+          week: week.weekNumber,
+          day: day,
+          dayIndex: dayCounter
+        });
+        dayCounter++;
+      });
+    });
+
+    // Get current day (or loop back if completed all days)
+    const totalDays = allDays.length;
+    if (totalDays === 0) return null;
+    
+    const currentIndex = currentDayIndex % totalDays;
+    const currentDayInfo = allDays[currentIndex];
+
+    return {
+      weekNumber: currentDayInfo.week,
+      day: currentDayInfo.day,
+      dayNumber: currentDayInfo.day.dayNumber,
+      totalCompleted: completedCount,
+      totalDays: totalDays,
+      progress: totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0
+    };
+  };
+
+  const currentProgramDay = getCurrentProgramDay();
+
+  // Auto-load exercises from current program day
+  useEffect(() => {
+    if (!session || !assignedProgram || !currentProgramDay || autoLoadAttempted) return;
+    
+    // Only auto-load if session has no exercises yet
+    if (session.exercises && session.exercises.length > 0) {
+      const exercises: SessionExercise[] = session.exercises.map(ex => ({
+        exerciseId: ex.exerciseId,
+        sets: Array.isArray(ex.sets) 
+          ? ex.sets.map(set => ({
+              reps: set.reps || 0,
+              weight: set.weight || 0,
+              rpe: set.rpe,
+              completed: set.completed
+            }))
+          : [],
+        notes: ex.notes || '',
+        completed: Array.isArray(ex.sets) ? ex.sets.every(s => s.completed) : false
+      }));
+      setSessionExercises(exercises);
+      setSessionNotes(session.notes || '');
+      setSessionDate(session.date || '');
+      setAutoLoadAttempted(true);
+      return;
+    }
+
+    const day = currentProgramDay.day;
+    
+    if (day.isRestDay) {
+      setSessionNotes(`${assignedProgram.name} - สัปดาห์ ${currentProgramDay.weekNumber}, ${day.name} (วันพักผ่อน)`);
+      setAutoLoadAttempted(true);
+      return;
+    }
+
+    // Load exercises from program day
+    const newExercises: SessionExercise[] = [];
+
+    if (day.sections && day.sections.length > 0) {
+      day.sections.forEach(section => {
+        section.exercises?.forEach((programEx) => {
+          const sets: ExerciseSet[] = [];
+          const numSets = programEx.sets || 3;
+          const repsValue = typeof programEx.reps === 'string' 
+            ? parseInt(programEx.reps.split('-')[0]) || 10 
+            : 10;
+
+          for (let i = 0; i < numSets; i++) {
+            sets.push({
+              reps: repsValue,
+              weight: programEx.weight || 0,
+              rpe: programEx.rpe,
+              completed: false
+            });
+          }
+
+          newExercises.push({
+            exerciseId: programEx.exerciseId,
+            sets,
+            notes: programEx.notes || '',
+            completed: false
+          });
+        });
+      });
+    } else if (day.exercises && day.exercises.length > 0) {
+      day.exercises.forEach(programEx => {
+        const sets: ExerciseSet[] = [];
+        const numSets = programEx.sets || 3;
+        const repsValue = typeof programEx.reps === 'string' 
+          ? parseInt(programEx.reps.split('-')[0]) || 10 
+          : 10;
+
+        for (let i = 0; i < numSets; i++) {
+          sets.push({
+            reps: repsValue,
+            weight: programEx.weight || 0,
+            rpe: programEx.rpe,
+            completed: false
+          });
+        }
+
+        newExercises.push({
+          exerciseId: programEx.exerciseId,
+          sets,
+          notes: programEx.notes || '',
+          completed: false
+        });
+      });
+    }
+
+    if (newExercises.length > 0) {
+      setSessionExercises(newExercises);
+      const newNotes = `${assignedProgram.name} - สัปดาห์ ${currentProgramDay.weekNumber}, ${day.name}`;
+      setSessionNotes(newNotes);
+      
+      // Update session with program info
+      updateSession(session.id, { 
+        programInstanceId: assignedProgramInstance?.id,
+        notes: newNotes,
+        exercises: newExercises.map(ex => ({
+          exerciseId: ex.exerciseId,
+          sets: ex.sets.map(s => ({ ...s, rest: 60 })),
+          notes: ex.notes
+        }))
+      });
+      
+      toast.success(`โหลดท่าจาก ${day.name} เรียบร้อย (${newExercises.length} ท่า)`);
+    }
+    
+    setAutoLoadAttempted(true);
+  }, [session, assignedProgram, currentProgramDay, autoLoadAttempted]);
+
+  // Initialize session date
+  useEffect(() => {
+    if (session) {
+      setSessionDate(session.date || new Date().toISOString());
+      if (session.notes) {
+        setSessionNotes(session.notes);
       }
     }
-  }, [sessionData, currentExerciseIndex, currentExercise]);
+  }, [session]);
 
   if (!session || !client) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">ไม่พบเซสชัน</p>
-        <Button onClick={() => navigate('/dashboard')} className="mt-4">
-          กลับไปแดชบอร์ด
-        </Button>
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground mb-4">ไม่พบข้อมูลการฝึก</p>
+          <Button onClick={() => navigate('/calendar')}>กลับไปปฏิทิน</Button>
+        </div>
       </div>
     );
   }
 
-  // Handler functions
-  const handleSetCompleted = (exerciseIndex: number, setIndex: number) => {
-    setSessionData(prev => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, exIdx) => 
-        exIdx === exerciseIndex 
-          ? {
-              ...ex,
-              sets: ex.sets.map((set, setIdx) => 
-                setIdx === setIndex 
-                  ? { 
-                      ...set, 
-                      completed: true,
-                      actual: set.actual || { ...set.planned, rpe: 8, notes: '' }
-                    }
-                  : set
-              )
-            }
-          : ex
-      )
-    }));
-    toast.success('บันทึกเซตสำเร็จ');
-  };
+  const isCompleted = session.status === 'completed';
+  const completedExercises = sessionExercises.filter(ex => ex.completed).length;
 
-  const handleMarkAllSets = (exerciseIndex: number) => {
-    setSessionData(prev => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, exIdx) => 
-        exIdx === exerciseIndex 
-          ? {
-              ...ex,
-              status: 'completed',
-              sets: ex.sets.map(set => ({ 
-                ...set, 
-                completed: true,
-                actual: set.actual || { ...set.planned, rpe: 8, notes: '' }
-              }))
-            }
-          : ex
-      )
-    }));
-    toast.success('เสร็จสิ้นท่านี้แล้ว');
-  };
-
-  const handleSkipExercise = (exerciseIndex: number) => {
-    setSessionData(prev => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, exIdx) => 
-        exIdx === exerciseIndex ? { ...ex, status: 'skipped' } : ex
-      )
-    }));
-    toast.success('ข้ามท่านี้แล้ว');
-  };
-
-  const handleQuickFillPlanned = () => {
-    setSessionData(prev => ({
-      ...prev,
-      exercises: prev.exercises.map(ex => ({
-        ...ex,
-        status: 'completed',
-        sets: ex.sets.map(set => ({
-          ...set,
-          completed: true,
-          actual: { ...set.planned, rpe: 8, notes: '' }
-        }))
-      }))
-    }));
-    toast.success('เติมข้อมูลตามแผนทั้งเซสชันแล้ว');
-    setShowQuickFillModal(false);
-  };
-
-  const handlePrintSession = () => {
-    // Mock print functionality
-    toast.success('กำลังสร้างชีทการออกกำลังกายสำหรับพิมพ์');
-  };
-
-  const handleEndSession = () => {
-    updateSession(session.id, {
-      status: 'completed',
-      summary: sessionSummary
+  // Toggle Exercise Expansion
+  const toggleExercise = (idx: number) => {
+    setExpandedExercises(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(idx)) {
+        newSet.delete(idx);
+      } else {
+        newSet.add(idx);
+      }
+      return newSet;
     });
-    setShowEndSessionDialog(false);
-    setShowSummaryReview(true);
   };
 
-  const handleFinalizeSummary = () => {
-    toast.success('เซสชันสิ้นสุดแล้ว');
-    navigate(`/clients/${client.id}?tab=sessions`);
+  // Update Set Value
+  const updateSetValue = (exerciseIdx: number, setIdx: number, field: 'reps' | 'weight' | 'rpe', value: string) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      const set = updated[exerciseIdx].sets[setIdx];
+      const numValue = parseFloat(value) || 0;
+      
+      if (field === 'reps') set.reps = numValue;
+      else if (field === 'weight') set.weight = numValue;
+      else if (field === 'rpe') set.rpe = numValue;
+      
+      return updated;
+    });
   };
 
-  const getExerciseStatusIcon = (status?: string) => {
-    switch (status) {
-      case 'completed': return <CheckCircle2 className="h-4 w-4 text-accent" />;
-      case 'current': return <Play className="h-4 w-4 text-primary" />;
-      case 'skipped': return <Minus className="h-4 w-4 text-gray-400" />;
-      default: return <Circle className="h-4 w-4 text-gray-300" />;
+  // Toggle Set Completed
+  const toggleSetCompleted = (exerciseIdx: number, setIdx: number) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      updated[exerciseIdx].sets[setIdx].completed = !updated[exerciseIdx].sets[setIdx].completed;
+      updated[exerciseIdx].completed = Array.isArray(updated[exerciseIdx].sets) 
+        ? updated[exerciseIdx].sets.every(s => s.completed)
+        : false;
+      return updated;
+    });
+  };
+
+  // Toggle Exercise Completed
+  const toggleExerciseCompleted = (exerciseIdx: number) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      const newState = !updated[exerciseIdx].completed;
+      updated[exerciseIdx].completed = newState;
+      if (Array.isArray(updated[exerciseIdx].sets)) {
+        updated[exerciseIdx].sets.forEach(set => {
+          set.completed = newState;
+        });
+      }
+      return updated;
+    });
+  };
+
+  // Update Exercise Notes
+  const updateExerciseNotes = (exerciseIdx: number, notes: string) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      updated[exerciseIdx].notes = notes;
+      return updated;
+    });
+  };
+
+  // Save Session
+  const handleSave = () => {
+    const updatedExercises = sessionExercises.map(ex => ({
+      exerciseId: ex.exerciseId,
+      sets: Array.isArray(ex.sets)
+        ? ex.sets.map(set => ({
+            reps: set.reps,
+            weight: set.weight,
+            rpe: set.rpe,
+            completed: set.completed,
+            rest: 60
+          }))
+        : [],
+      notes: ex.notes
+    }));
+
+    const allCompleted = sessionExercises.length > 0 && sessionExercises.every(ex => ex.completed);
+
+    updateSession(session.id, {
+      exercises: updatedExercises,
+      notes: sessionNotes,
+      status: allCompleted ? 'completed' : session.status,
+      summary: `บันทึก ${completedExercises}/${sessionExercises.length} ท่า`
+    });
+
+    toast.success('บันทึกข้อมูลเรียบร้อย');
+  };
+
+  // Complete Session
+  const handleComplete = () => {
+    handleSave();
+    updateSession(session.id, { status: 'completed' });
+    setShowCompletionForm(true); // เปิด Completion Form ก่อน
+  };
+
+  // Handle Completion Form Submit
+  const handleCompletionSubmit = (data: SessionCompletionData) => {
+    // บันทึกข้อมูลเพิ่มเติมลง session
+    updateSession(session.id, {
+      type: data.type,
+      date: data.startTime,
+      endTime: data.endTime,
+      rating: data.rating,
+      bodyWeight: data.bodyWeight,
+      summary: data.summary,
+      improvements: data.improvements,
+      nextGoals: data.nextGoals,
+      achievements: data.achievements
+    });
+    
+    // ปิด Completion Form และเปิด Summary Card
+    setShowCompletionForm(false);
+    setCompletionData(data);
+    setShowSummaryCard(true);
+    toast.success('บันทึกข้อมูลการฝึกเสร็จสมบูรณ์!');
+  };
+
+  // Print
+  const handlePrint = () => {
+    window.print();
+    toast.success('กำลังพิมพ์...');
+  };
+
+  // Add single exercise
+  const handleAddExercise = () => {
+    if (!selectedExerciseId) {
+      toast.error('กรุณาเลือกท่าออกกำลังกาย');
+      return;
+    }
+
+    const sets: ExerciseSet[] = [];
+    for (let i = 0; i < exerciseSets; i++) {
+      sets.push({
+        reps: exerciseReps,
+        weight: 0,
+        completed: false
+      });
+    }
+
+    const newExercise: SessionExercise = {
+      exerciseId: selectedExerciseId,
+      sets,
+      notes: '',
+      completed: false
+    };
+
+    setSessionExercises(prev => [...prev, newExercise]);
+    setShowExerciseDialog(false);
+    setSelectedExerciseId('');
+    setExerciseSets(3);
+    setExerciseReps(10);
+    toast.success('เพิ่มท่าออกกำลังกายเรียบร้อย');
+  };
+
+  // Delete exercise
+  const handleDeleteExercise = (exerciseIdx: number) => {
+    const exercise = getExerciseById(sessionExercises[exerciseIdx].exerciseId);
+    if (window.confirm(`คุณต้องการลบท่า "${exercise?.name}" ใช่หรือไม่?`)) {
+      setSessionExercises(prev => prev.filter((_, idx) => idx !== exerciseIdx));
+      toast.success('ลบท่าออกกำลังกายเรียบร้อย');
     }
   };
 
-  const isReadOnly = session.status === 'completed';
+  // Add set to exercise
+  const handleAddSet = (exerciseIdx: number) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      if (!Array.isArray(updated[exerciseIdx].sets)) {
+        updated[exerciseIdx].sets = [];
+      }
+      const lastSet = updated[exerciseIdx].sets[updated[exerciseIdx].sets.length - 1];
+      
+      const newSet: ExerciseSet = {
+        reps: lastSet?.reps || 10,
+        weight: lastSet?.weight || 0,
+        rpe: lastSet?.rpe,
+        completed: false
+      };
+      
+      updated[exerciseIdx].sets.push(newSet);
+      return updated;
+    });
+    toast.success('เพิ่มเซตเรียบร้อย');
+  };
 
-  if (showSummaryReview) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setShowSummaryReview(false)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1>Summary Review</h1>
-            <p className="text-gray-600">{client.name} - สรุปเซสชัน</p>
-          </div>
-        </div>
+  // Delete set from exercise
+  const handleDeleteSet = (exerciseIdx: number, setIdx: number) => {
+    setSessionExercises(prev => {
+      const updated = [...prev];
+      if (updated[exerciseIdx].sets.length > 1) {
+        updated[exerciseIdx].sets.splice(setIdx, 1);
+        updated[exerciseIdx].completed = updated[exerciseIdx].sets.every(s => s.completed);
+      } else {
+        toast.error('ต้องมีอย่างน้อย 1 เซต');
+      }
+      return updated;
+    });
+  };
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>ผลการออกกำลังกาย</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sessionData.exercises.map((exercise, idx) => (
-                <div key={idx} className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    {getExerciseStatusIcon(exercise.status)}
-                    <span className="font-medium">{exercise.name}</span>
-                    <Badge variant={exercise.status === 'completed' ? 'default' : 
-                                  exercise.status === 'skipped' ? 'secondary' : 'outline'}>
-                      {exercise.status === 'completed' ? 'เสร็จ' : 
-                       exercise.status === 'skipped' ? 'ข้าม' : 'รอ'}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    {exercise.sets.map((set, setIdx) => (
-                      <div key={setIdx} className="flex justify-between">
-                        <span>Set {setIdx + 1}:</span>
-                        <span>
-                          {set.completed && set.actual ? 
-                            `${set.actual.reps} ครั้ง × ${set.actual.weight} กก.` :
-                            `${set.planned.reps} ครั้ง × ${set.planned.weight} กก. (แผน)`
-                          }
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>สรุปและหมายเหตุ</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>สรุปเซสชัน</Label>
-                <Textarea
-                  value={sessionSummary}
-                  onChange={(e) => setSessionSummary(e.target.value)}
-                  placeholder="ฟอร์มดีขึ้น, แข็งแรงเพิ่มขึ้น, ปรับน้ำหนักครั้งหน้า..."
-                  rows={4}
-                />
-              </div>
-              
-              <div>
-                <Label>หมายเหตุระหว่างเซสชัน</Label>
-                <Textarea
-                  value={quickNotes}
-                  onChange={(e) => setQuickNotes(e.target.value)}
-                  placeholder="ข้อสังเกต, อาการบาดเจ็บ, การปรับปรุง..."
-                  rows={3}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <h4>สร้างการ์ดสรุป</h4>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setShowSummaryCard(true)}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    ดาวน์โหลด
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setShowSummaryCard(true)}
-                  >
-                    <Share className="h-4 w-4 mr-1" />
-                    แชร์ให้ลูกเทรน
-                  </Button>
-                </div>
-              </div>
-
-              <Button onClick={handleFinalizeSummary} className="w-full">
-                เสร็จสิ้นเซสชัน
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Session Summary Card Modal */}
-        <SessionSummaryCard
-          isOpen={showSummaryCard}
-          onClose={() => setShowSummaryCard(false)}
-          clientName={client.name}
-          sessionDate={session.date}
-          sessionData={sessionData}
-          sessionSummary={sessionSummary}
-        />
-      </div>
-    );
-  }
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      full: date.toLocaleDateString('th-TH', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        weekday: 'long'
+      }),
+      time: date.toLocaleTimeString('th-TH', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      })
+    };
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          
-          <div>
-            <h1>Coach Mode - Session Log</h1>
-            <p className="text-gray-600">{client.name} - {client.goal}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrintSession}>
-            <Printer className="h-4 w-4 mr-1" />
-            พิมพ์ชีท
-          </Button>
-          
-          <Dialog open={showQuickFillModal} onOpenChange={setShowQuickFillModal}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Zap className="h-4 w-4 mr-1" />
-                Quick Fill
+      <div className="bg-[#002140] text-white py-6 print:hidden">
+        <div className="container mx-auto px-6">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/clients/${client.id}`)}
+              className="text-white hover:bg-white/10 -ml-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              กลับ
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePrint}
+                className="text-white hover:bg-white/10"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                พิมพ์
               </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby="quick-fill-description">
-              <DialogHeader>
-                <DialogTitle>Quick Fill Options</DialogTitle>
-                <DialogDescription id="quick-fill-description">เลือกวิธีเติมข้อมูลแบบรวดเร็ว</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={handleQuickFillPlanned}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSave}
+                className="text-white hover:bg-white/10"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                บันทึก
+              </Button>
+              {!isCompleted && sessionExercises.length > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleComplete}
+                  className="bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Fill as Planned - เติมตามแผนทั้งเซสชัน
+                  เสร็จสิ้น
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Per-Exercise Fill - เลือกท่าทีละตัว
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <ClipboardPaste className="h-4 w-4 mr-2" />
-                  Bulk Paste - วางจาก Clipboard
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              )}
+            </div>
+          </div>
           
-          {!isReadOnly && (
-            <Dialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
-              <DialogTrigger asChild>
-                <Button variant="destructive">
-                  จบเซสชัน
-                </Button>
-              </DialogTrigger>
-              <DialogContent aria-describedby="end-session-description">
-                <DialogHeader>
-                  <DialogTitle>จบเซสชัน</DialogTitle>
-                  <DialogDescription id="end-session-description">
-                    ต้องการจบเซสชันและไปยังหน้าสรุปผลหรือไม่?
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowEndSessionDialog(false)}>
-                    ยกเลิก
-                  </Button>
-                  <Button onClick={handleEndSession}>
-                    จบเซสชัน
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
+              <User className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-2xl mb-1">{client.name}</h1>
+              <p className="text-sm text-white/70">
+                {formatDate(sessionDate).full} • {formatDate(sessionDate).time}
+              </p>
+            </div>
+            {isCompleted && (
+              <Badge className="bg-green-500 text-white">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                เสร็จสิ้น
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Session Info */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">วันที่</p>
-              <p className="font-medium">
-                {new Date(session.date).toLocaleDateString('th-TH')}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500">เวลา</p>
-              <p className="font-medium">
-                {new Date(session.date).toLocaleTimeString('th-TH', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500">ความคืบหน้า</p>
-              <p className="font-medium">
-                {sessionData.exercises.filter(ex => ex.status === 'completed').length}/
-                {sessionData.exercises.length} ท่า
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Today's Plan - Left Sidebar */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Today's Plan
-                {!isReadOnly && (
-                  <Dialog open={showAddExerciseModal} onOpenChange={setShowAddExerciseModal}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4 mr-1" />
-                        เพิ่ม
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent aria-describedby="add-exercise-description">
-                      <DialogHeader>
-                        <DialogTitle>เพิ่มท่าออกกำลังกาย</DialogTitle>
-                        <DialogDescription id="add-exercise-description">เลือกท่าจากไลบรารีหรือสร้างใหม่</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="เลือกท่าจากไลบรารี" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="deadlift">Deadlift</SelectItem>
-                            <SelectItem value="pullup">Pull-up</SelectItem>
-                            <SelectItem value="pushup">Push-up</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" onClick={() => setShowAddExerciseModal(false)}>
-                            ยกเลิก
-                          </Button>
-                          <Button onClick={() => {
-                            toast.success('เพิ่มท่าเรียบร้อย');
-                            setShowAddExerciseModal(false);
-                          }}>
-                            เพิ่มท่า
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sessionData.exercises.map((exercise, index) => (
-                <div 
-                  key={index} 
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    index === currentExerciseIndex ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => setCurrentExerciseIndex(index)}
-                >
+      <div className="container mx-auto px-6 py-6">
+        {/* Program Progress Card */}
+        {assignedProgram && currentProgramDay && (
+          <Card className="border-[#002140]/20 bg-gradient-to-br from-[#002140]/5 to-transparent mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    {getExerciseStatusIcon(exercise.status)}
-                    <span className="font-medium text-sm">{exercise.name}</span>
+                    <BookOpen className="h-5 w-5 text-[#002140]" />
+                    <h2 className="text-lg">{assignedProgram.name}</h2>
                   </div>
-                  <div className="space-y-1">
-                    {exercise.sets.map((set, setIndex) => (
-                      <div key={setIndex} className="flex items-center justify-between text-xs">
-                        <span>Set {setIndex + 1}:</span>
-                        <span className="text-gray-600">
-                          {set.planned.reps} × {set.planned.weight}kg
-                        </span>
-                        <div className={`w-2 h-2 rounded-full ${
-                          set.completed ? 'bg-green-500' : 'bg-gray-300'
-                        }`} />
-                      </div>
-                    ))}
+                  <p className="text-sm text-muted-foreground">
+                    สัปดาห์ {currentProgramDay.weekNumber} • {currentProgramDay.day.name}
+                  </p>
+                </div>
+                <Badge variant="outline" className="gap-1">
+                  <Activity className="h-3 w-3" />
+                  {currentProgramDay.totalCompleted}/{currentProgramDay.totalDays} วัน
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">ความก้าวหน้าโดยรวม</span>
+                  <span className="font-medium">{currentProgramDay.progress}%</span>
+                </div>
+                <Progress value={currentProgramDay.progress} className="h-2" />
+              </div>
+
+              {currentProgramDay.day.isRestDay && (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <Info className="h-4 w-4" />
+                    <span className="text-sm">วันนี้เป็นวันพักผ่อน</span>
                   </div>
                 </div>
-              ))}
+              )}
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Current Exercise - Center */}
-        <div className="lg:col-span-6">
-          {currentExercise ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <span>{currentExercise.name}</span>
-                      <Badge variant="outline">{currentExercise.category}</Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      กำลังทำท่าที่ {currentExerciseIndex + 1} จาก {sessionData.exercises.length}
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleSkipExercise(currentExerciseIndex)}
-                    >
-                      <SkipForward className="h-4 w-4 mr-1" />
-                      ข้ามท่า
-                    </Button>
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => handleMarkAllSets(currentExerciseIndex)}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      เสร็จทั้งท่า
-                    </Button>
-                  </div>
+        {/* No Program Warning */}
+        {!assignedProgram && (
+          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-orange-900 dark:text-orange-200 mb-1">
+                    ลูกเทรนยังไม่มีโปรแกรม
+                  </h3>
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    กรุณามอบหมายโปรแกรมให้ลูกเทรนก่อน เพื่อให้ระบบสามารถโหลดท่าออกกำลังกายอัตโนมัติได้
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 border-orange-300 text-orange-700 hover:bg-orange-100"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                  >
+                    ไปที่โปรไฟล์ลูกเทรน
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentExercise.sets.map((set, setIndex) => (
-                  <div key={setIndex} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-4">
-                        <span className="font-medium">Set {setIndex + 1}</span>
-                        <span className="text-gray-600">
-                          แผน: {set.planned.reps} ครั้ง × {set.planned.weight} กก.
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Actions */}
+        {!isCompleted && (
+          <Card className="border-[#002140]/20 mb-6">
+            <CardHeader>
+              <CardTitle className="text-base">เครื่องมือ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExerciseDialog(true)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  เพิ่มท่าใหม่
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Exercises List */}
+        {sessionExercises.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg flex items-center gap-2">
+                <Dumbbell className="h-5 w-5 text-[#002140]" />
+                ท่าออกกำลังกาย ({completedExercises}/{sessionExercises.length})
+              </h2>
+            </div>
+
+            {sessionExercises.map((sessionEx, exerciseIdx) => {
+              const exercise = getExerciseById(sessionEx.exerciseId);
+              const isExpanded = expandedExercises.has(exerciseIdx);
+
+              return (
+                <Card key={exerciseIdx} className="border-border/40">
+                  <CardContent className="p-4">
+                    {/* Exercise Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 flex-1">
                         <Button
+                          variant="ghost"
                           size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingSet({ exerciseIndex: currentExerciseIndex, setIndex });
-                            setShowEditSetModal(true);
-                          }}
+                          onClick={() => toggleExerciseCompleted(exerciseIdx)}
+                          className="h-6 w-6 p-0 mt-1"
+                          disabled={isCompleted}
                         >
-                          <Edit3 className="h-4 w-4 mr-1" />
-                          แก้ไข
+                          {sessionEx.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground" />
+                          )}
                         </Button>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{exercise?.name || 'Unknown'}</h3>
+                            {exercise?.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {exercise.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {sessionEx.sets.length} เซต
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleExercise(exerciseIdx)}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                        {!isCompleted && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleAddSet(exerciseIdx)}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                เพิ่มเซต
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteExercise(exerciseIdx)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                ลบท่า
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
-                    
-                    {set.completed ? (
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          <span className="font-medium text-green-700">เสร็จแล้ว</span>
+
+                    {/* Sets Table */}
+                    {isExpanded && (
+                      <div className="space-y-3">
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="p-2 text-left w-12">Set</th>
+                                <th className="p-2 text-center">Reps</th>
+                                <th className="p-2 text-center">น้ำหนัก (kg)</th>
+                                <th className="p-2 text-center">RPE</th>
+                                <th className="p-2 text-center w-12">✓</th>
+                                {!isCompleted && <th className="p-2 w-12"></th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sessionEx.sets.map((set, setIdx) => (
+                                <tr key={setIdx} className="border-t">
+                                  <td className="p-2 text-muted-foreground">{setIdx + 1}</td>
+                                  <td className="p-2">
+                                    <Input
+                                      type="number"
+                                      value={set.reps || ''}
+                                      onChange={(e) => updateSetValue(exerciseIdx, setIdx, 'reps', e.target.value)}
+                                      className="h-8 text-center"
+                                      disabled={isCompleted}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      type="number"
+                                      step="0.5"
+                                      value={set.weight || ''}
+                                      onChange={(e) => updateSetValue(exerciseIdx, setIdx, 'weight', e.target.value)}
+                                      className="h-8 text-center"
+                                      disabled={isCompleted}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="10"
+                                      value={set.rpe || ''}
+                                      onChange={(e) => updateSetValue(exerciseIdx, setIdx, 'rpe', e.target.value)}
+                                      className="h-8 text-center"
+                                      placeholder="-"
+                                      disabled={isCompleted}
+                                    />
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleSetCompleted(exerciseIdx, setIdx)}
+                                      className="h-8 w-8 p-0"
+                                      disabled={isCompleted}
+                                    >
+                                      {set.completed ? (
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                      ) : (
+                                        <Circle className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                    </Button>
+                                  </td>
+                                  {!isCompleted && (
+                                    <td className="p-2">
+                                      {sessionEx.sets.length > 1 && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteSet(exerciseIdx, setIdx)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                                        </Button>
+                                      )}
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                        <span className="text-green-700">
-                          {set.actual ? 
-                            `${set.actual.reps} ครั้ง × ${set.actual.weight} กก. RPE: ${set.actual.rpe}` :
-                            'ตามแผน'
-                          }
-                        </span>
+
+                        {/* Exercise Notes */}
+                        <div>
+                          <Label className="text-xs text-muted-foreground">โน้ต</Label>
+                          <Textarea
+                            value={sessionEx.notes}
+                            onChange={(e) => updateExerciseNotes(exerciseIdx, e.target.value)}
+                            placeholder="บันทึกโน้ตสำหรับท่านี้..."
+                            className="mt-1 min-h-[60px]"
+                            disabled={isCompleted}
+                          />
+                        </div>
                       </div>
-                    ) : (
-                      <Button
-                        size="lg"
-                        className="w-full"
-                        onClick={() => handleSetCompleted(currentExerciseIndex, setIndex)}
-                      >
-                        <Check className="h-5 w-5 mr-2" />
-                        ✓ Done - บันทึกเซตนี้
-                      </Button>
                     )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500 mb-4">เลือกท่าจากรายการด้านซ้ายเพื่อเริ่มบันทึก</p>
-                <Button onClick={() => setCurrentExerciseIndex(0)}>
-                  เริ่มท่าแรก
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Quick Actions - Right Sidebar */}
-        <div className="lg:col-span-3">
-          <div className="space-y-4">
-            {/* Quick Notes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Quick Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={quickNotes}
-                  onChange={(e) => setQuickNotes(e.target.value)}
-                  placeholder="บันทึกข้อสังเกตระหว่างเซสชัน..."
-                  rows={4}
-                  className="resize-none"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Issues & Contraindications */}
-            <Card>
-              <CardHeader>
-                <CardTitle>ข้อควรระวัง</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded">
-                  <span className="text-sm">⚠️ เฝ้าระวังหัวเข่าขวา</span>
-                </div>
-                <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
-                  <span className="text-sm">💡 เน้นฟอร์มมากกว่าน้ำหนัก</span>
-                </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Plus className="h-4 w-4 mr-1" />
-                  เพิ่มข้อควรระวัง
-                </Button>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <Card className="border-border/40">
+            <CardContent className="p-12 text-center">
+              <Dumbbell className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg mb-2">ยังไม่มีท่าออกกำลังกาย</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {assignedProgram 
+                  ? 'กำลังโหลดท่าจากโปรแกรม...' 
+                  : 'กรุณามอบหมายโปรแกรมให้ลูกเทรนก่อน'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Session Notes */}
+        {sessionExercises.length > 0 && (
+          <Card className="border-[#002140]/20 mt-6">
+            <CardHeader>
+              <CardTitle className="text-base">โน้ตการฝึก</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                placeholder="บันทึกโน้ตสำหรับการฝึกครั้งนี้..."
+                className="min-h-[100px]"
+                disabled={isCompleted}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Edit Set Modal */}
-      <Dialog open={showEditSetModal} onOpenChange={setShowEditSetModal}>
-        <DialogContent aria-describedby="edit-set-description">
+      {/* Add Exercise Dialog */}
+      <Dialog open={showExerciseDialog} onOpenChange={setShowExerciseDialog}>
+        <DialogContent aria-describedby="add-exercise-description">
           <DialogHeader>
-            <DialogTitle>แก้ไขเซต</DialogTitle>
-            <DialogDescription id="edit-set-description">
-              ปรับค่าจริงที่ทำได้ (Reps/Weight/RPE/Notes)
+            <DialogTitle>เพิ่มท่าออกกำลังกาย</DialogTitle>
+            <DialogDescription id="add-exercise-description">
+              เลือกท่าออกกำลังกายและกำหนดจำนวนเซต
             </DialogDescription>
           </DialogHeader>
-          {editingSet && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>จำนวนครั้ง</Label>
-                  <Input placeholder="10" />
-                </div>
-                <div>
-                  <Label>น้ำหนัก (กก.)</Label>
-                  <Input placeholder="60" />
-                </div>
-                <div>
-                  <Label>RPE (1-10)</Label>
-                  <Input placeholder="8" />
-                </div>
+          <div className="space-y-4">
+            <div>
+              <Label>ท่าออกกำลังกาย</Label>
+              <Select value={selectedExerciseId} onValueChange={setSelectedExerciseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกท่า" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exercises.map(ex => (
+                    <SelectItem key={ex.id} value={ex.id}>
+                      {ex.name} ({ex.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>จำนวนเซต</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={exerciseSets}
+                  onChange={(e) => setExerciseSets(parseInt(e.target.value) || 1)}
+                />
               </div>
               <div>
-                <Label>หมายเหตุ</Label>
-                <Textarea placeholder="ฟอร์มดี, รู้สึกแข็งแรง..." rows={2} />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowEditSetModal(false)}>
-                  ยกเลิก
-                </Button>
-                <Button onClick={() => {
-                  toast.success('บันทึกการแก้ไขแล้ว');
-                  setShowEditSetModal(false);
-                }}>
-                  บันทึก
-                </Button>
+                <Label>Reps ต่อเซต</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={exerciseReps}
+                  onChange={(e) => setExerciseReps(parseInt(e.target.value) || 1)}
+                />
               </div>
             </div>
-          )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExerciseDialog(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleAddExercise} className="bg-[#002140] hover:bg-[#002140]/90">
+              เพิ่มท่า
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Session Summary for Read-Only */}
-      {isReadOnly && session.summary && (
-        <Card>
-          <CardHeader>
-            <CardTitle>สรุปเซสชัน</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{session.summary}</p>
-            <div className="flex gap-2 mt-4">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowSummaryCard(true)}
-              >
-                <Download className="h-4 w-4 mr-1" />
-                ดาวน์โหลดการ์ด
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowSummaryCard(true)}
-              >
-                <Share className="h-4 w-4 mr-1" />
-                แชร์ให้ลูกเทรน
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Card */}
+      {showSummaryCard && (
+        <SessionSummaryCard
+          session={session}
+          client={client}
+          onClose={() => {
+            setShowSummaryCard(false);
+            navigate(`/clients/${client.id}`);
+          }}
+        />
       )}
 
-      {/* Session Summary Card Modal */}
-      <SessionSummaryCard
-        isOpen={showSummaryCard}
-        onClose={() => setShowSummaryCard(false)}
-        clientName={client.name}
-        sessionDate={session.date}
-        sessionData={sessionData}
-        sessionSummary={sessionSummary}
-      />
+      {/* Completion Form */}
+      {showCompletionForm && (
+        <SessionCompletionForm
+          open={showCompletionForm}
+          onClose={() => setShowCompletionForm(false)}
+          onSubmit={handleCompletionSubmit}
+          clientName={client.name}
+          defaultDate={sessionDate}
+        />
+      )}
     </div>
   );
 }
