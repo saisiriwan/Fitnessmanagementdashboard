@@ -5,12 +5,12 @@
   ## Overview & Vision
 ระบบนี้ถูกพัฒนาขึ้นเพื่อเป็นเครื่องมือจัดการแบบครบวงจร โดยเริ่มจากการพัฒนาเป็น Web Application และมีแผนการในอนาคตที่จะแปลงเป็น Mobile Application ผ่านสถาปัตยกรรม Web View โดยใช้ Flutter เพื่อให้รองรับการใช้งานที่คล่องตัวในยิม
 Tech Stack ที่ใช้มีดังนี้
--Frontend
+Frontend
    Framework: React
    Language: TypeScript 
    Styling: Tailwind CSS
--Backend
+, Backend
 Language: Go (Golang),Web Framework: Gin
--Database
+และ Database
 System: PostgreSQL
 
