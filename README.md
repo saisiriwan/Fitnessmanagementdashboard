@@ -10,9 +10,7 @@ Tech Stack ที่ใช้มีดังนี้
    Language: TypeScript 
    Styling: Tailwind CSS
 -Backend
-Language: Go (Golang)
-Web Framework: Gin
-Architecture: Clean Architecture (Handlers, Services, Repositories)
-- Database
+Language: Go (Golang),Web Framework: Gin
+-Database
 System: PostgreSQL
 
